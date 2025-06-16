@@ -5,6 +5,7 @@ import re
 import contextlib
 
 from asgiref.local import Local
+from asgiref.sync import iscoroutinefunction, markcoroutinefunction
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
@@ -106,7 +107,12 @@ class EasyLoggingMiddleware(MiddlewareMixin):
             "execution_time": 0,
         }
 
+        if iscoroutinefunction(self.get_response):
+            markcoroutinefunction(self)
+
     def __call__(self, request):
+        if iscoroutinefunction(self):
+            return self.__acall__(request)
         set_current_request(request)
 
         if not should_log_url(request.path):
@@ -134,9 +140,10 @@ class EasyLoggingMiddleware(MiddlewareMixin):
         response = self.get_response(request)
         end_time = time.time()
 
+        # TODO: Find way to add status code to response_data
+
         # Log response
         response_data = {
-            "status_code": response.status_code,
             "headers": dict(response.headers),
         }
 
@@ -190,9 +197,10 @@ class EasyLoggingMiddleware(MiddlewareMixin):
         response = await self.get_response(request)
         end_time = time.time()
 
+        # TODO: Find way to add status code to response_data
+
         # Log response
         response_data = {
-            "status_code": response.status_code,
             "headers": dict(response.headers),
         }
 
