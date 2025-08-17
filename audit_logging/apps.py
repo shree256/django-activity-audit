@@ -1,10 +1,10 @@
 from django.apps import AppConfig
 
 
-class EasyLoggingConfig(AppConfig):
+class AuditLoggingConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "easy_logging"
-    verbose_name = "Easy Audit Logging"
+    name = "audit_logging"
+    verbose_name = "Audit Logging"
 
     def ready(self):
         # Import and register custom log levels

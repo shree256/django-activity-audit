@@ -1,6 +1,6 @@
 [project]
-name = "easy-audit-logging"
-version = "0.1.30"
+name = "audit-logging"
+version = "0.0.2"
 description = "A Django package for easy CRUD operation logging and container logs"
 authors = [
     { name = "Shreeshan", email = "shreeshan256@gmail.com" }
@@ -34,9 +34,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/shree256/easy-audit-logging"
-Repository = "https://github.com/shree256/easy-audit-logging"
-Documentation = "https://github.com/shree256/easy-audit-logging"
+Homepage = "https://github.com/shree256/audit-logging"
+Repository = "https://github.com/shree256/audit-logging"
+Documentation = "https://github.com/shree256/audit-logging"
 
 [project.optional-dependencies]
 dev = [

@@ -1,4 +1,4 @@
-# Easy Audit Logging
+# Audit Logging
 
 A Django package that extends the default logging mechanism to track CRUD operations and container logs.
 
@@ -16,14 +16,14 @@ A Django package that extends the default logging mechanism to track CRUD operat
 
 1. Install the package:
 ```bash
-pip install easy-audit-logging
+pip install audit-logging
 ```
 
-2. Add 'easy_logging' to your INSTALLED_APPS in settings.py:
+2. Add 'audit_logging' to your INSTALLED_APPS in settings.py:
 ```python
 INSTALLED_APPS = [
     ...
-    'easy_logging',
+    'audit_logging',
 ]
 ```
 
@@ -31,13 +31,13 @@ INSTALLED_APPS = [
 ```python
 MIDDLEWARE = [
     ...
-    'easy_logging.middleware.EasyLoggingMiddleware',
+    'audit_logging.middleware.AuditLoggingMiddleware',
 ]
 ```
 
 4. Configure logging in settings.py:
 ```python
-from easy_logging import *
+from audit_logging import *
 
 LOGGING = {
     "version": 1,

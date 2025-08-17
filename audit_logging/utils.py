@@ -10,31 +10,31 @@ def get_console_formatter() -> dict:
 
 def get_json_formatter() -> dict:
     return {
-        "()": "easy_logging.formatters.JsonFormatter",
+        "()": "audit_logging.formatters.JsonFormatter",
     }
 
 
 def get_api_formatter() -> dict:
     return {
-        "()": "easy_logging.formatters.APIFormatter",
+        "()": "audit_logging.formatters.APIFormatter",
     }
 
 
 def get_audit_formatter() -> dict:
     return {
-        "()": "easy_logging.formatters.AuditFormatter",
+        "()": "audit_logging.formatters.AuditFormatter",
     }
 
 
 def get_login_formatter() -> dict:
     return {
-        "()": "easy_logging.formatters.LoginFormatter",
+        "()": "audit_logging.formatters.LoginFormatter",
     }
 
 
 def get_json_handler(
     level: str,
-    filename: str = "easy_logs/app.log",
+    filename: str = "audit_logs/app.log",
     formatter: str = "json",
     max_bytes: int = 1024 * 1024 * 10,
     backup_count: int = 5,
@@ -50,12 +50,12 @@ def get_json_handler(
 
 
 def get_api_handler(
-    filename: str = "easy_logs/api.log",
+    filename: str = "audit_logs/api.log",
     formatter: str = "api_json",
 ) -> dict:
     return {
         "level": API,
-        "class": "easy_logging.handlers.EasyLogHandler",
+        "class": "audit_logging.handlers.AuditLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
@@ -64,12 +64,12 @@ def get_api_handler(
 
 
 def get_audit_handler(
-    filename: str = "easy_logs/audit.log",
+    filename: str = "audit_logs/audit.log",
     formatter: str = "audit_json",
 ) -> dict:
     return {
         "level": AUDIT,
-        "class": "easy_logging.handlers.EasyLogHandler",
+        "class": "audit_logging.handlers.AuditLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
@@ -78,12 +78,12 @@ def get_audit_handler(
 
 
 def get_login_handler(
-    filename: str = "easy_logs/login.log",
+    filename: str = "audit_logs/login.log",
     formatter: str = "login_json",
 ) -> dict:
     return {
         "level": LOGIN,
-        "class": "easy_logging.handlers.EasyLogHandler",
+        "class": "audit_logging.handlers.AuditLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
@@ -107,7 +107,7 @@ def push_usage_log(message: str, event: str, success: bool, error: str, extra: d
     import logging
     from .signals import get_user_details
 
-    logger = logging.getLogger("easy.login")
+    logger = logging.getLogger("audit.login")
 
     data = {
         "user": get_user_details(),

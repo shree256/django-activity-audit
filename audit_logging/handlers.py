@@ -6,7 +6,7 @@ from .formatters import APIFormatter, AuditFormatter, LoginFormatter
 from .logger_levels import API, AUDIT, LOGIN
 
 
-class EasyLogHandler(RotatingFileHandler):
+class AuditLogHandler(RotatingFileHandler):
     """Custom handler for audit.request logger that ensures proper formatting and validation of audit logs."""
 
     def __init__(

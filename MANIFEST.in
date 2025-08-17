@@ -3,7 +3,7 @@ include README.md
 include pyproject.toml
 include setup.py
 
-recursive-include easy_logging *.py
-recursive-include easy_logging *.md
-recursive-include easy_logging *.txt
-recursive-include easy_logging *.json 
+recursive-include audit_logging *.py
+recursive-include audit_logging *.md
+recursive-include audit_logging *.txt
+recursive-include audit_logging *.json 

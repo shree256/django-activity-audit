@@ -1,6 +1,6 @@
-default_app_config = "easy_logging.apps.EasyLoggingConfig"
+default_app_config = "audit_logging.apps.AuditLoggingConfig"
 
-from easy_logging.utils import (
+from audit_logging.utils import (
     get_console_formatter,
     get_json_formatter,
     get_json_handler,
