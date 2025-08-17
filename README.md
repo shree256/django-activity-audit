@@ -111,6 +111,30 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
 }
 ```
 
+### CRUD Log
+```json
+{
+    "timestamp": "2025-08-16 17:06:32.403",
+    "level": "AUDIT",
+    "name": "audit.crud",
+    "message": "CREATE event for User (id: 6f77b814-f9c1-4cab-a737-6677734bc303)",
+    "model": "User",
+    "event_type": "CREATE",
+    "instance_id": "6f77b814-f9c1-4cab-a737-6677734bc303",
+    "user": {
+        "id": "cae8ffb4-ba52-409c-9a6f-e10362bfaf97",
+        "title": "",
+        "email": "example@source.com",
+        "first_name": "",
+        "middle_name": "",
+        "last_name": "",
+        "sex": "",
+        "date_of_birth": null
+    },
+    "extra": {}
+}
+```
+
 ### Request-Response Log
 #### Incoming Log Format
 ```json
@@ -164,7 +188,43 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
     "execution_time": 5.16809344291687
 }
 ```
+## Project Structure
+```json
+    audit_logging/
+        __init__.py
+        apps.py
+        constants.py
+        logging.py
+        middleware.py
+        signals.py
+        handlers.py
+        utils.py
+        tests.py
+    setup.py
+    README.md
+    LICENSE
+    MANIFEST.in
+```
+
+## Notes
+
+- Compatible with **Django 3.2+** and **Python 3.7+**.
+- Designed for easy integration with observability stacks using Vector, ClickHouse, and Grafana.
+- Capture Django CRUD operations automatically
+- Write structured JSON logs
+- Ready for production-grade logging pipelines
+- Simple pip install, reusable across projects
+- Zero additional database overhead! 
+
+## Related Tools
+
+- `Vector.dev <https://vector.dev/>`_
+- `ClickHouse <https://clickhouse.com/>`_ 
+- `Grafana <https://grafana.com/>`_
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+
+
