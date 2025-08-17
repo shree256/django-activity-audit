@@ -8,9 +8,9 @@ def get_console_formatter() -> dict:
     }
 
 
-def get_json_file_formatter() -> dict:
+def get_json_formatter() -> dict:
     return {
-        "()": "easy_logging.formatters.JsonFileFormatter",
+        "()": "easy_logging.formatters.JsonFormatter",
     }
 
 
@@ -32,7 +32,7 @@ def get_login_formatter() -> dict:
     }
 
 
-def get_json_file_handler(
+def get_json_handler(
     level: str,
     filename: str = "easy_logs/app.log",
     formatter: str = "json",

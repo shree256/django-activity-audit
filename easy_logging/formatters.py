@@ -3,7 +3,7 @@ import datetime
 import json
 
 
-class JsonFileFormatter(logging.Formatter):
+class JsonFormatter(logging.Formatter):
     def __init__(self, timestamp_format: str = "%Y-%m-%d %H:%M:%S.%f"):
         super().__init__()
         self.timestamp_format = timestamp_format

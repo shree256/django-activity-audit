@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "easy-audit-logging"
-version = "0.1.15"
+version = "0.1.28"
 description = "A Django package for easy CRUD operation logging and container logs"
 readme = "README.md"
 license = "MIT"

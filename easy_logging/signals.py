@@ -42,9 +42,7 @@ def get_user_details():
         "middle_name": user.middle_name if hasattr(user, "middle_name") else "",
         "last_name": user.last_name if hasattr(user, "last_name") else "",
         "sex": user.sex if hasattr(user, "sex") else "",
-        "date_of_birth": user.date_of_birth
-        if hasattr(user, "date_of_birth")
-        else "",
+        "date_of_birth": user.date_of_birth if hasattr(user, "date_of_birth") else "",
     }
     return data
 
@@ -67,10 +65,7 @@ def get_calling_model() -> Optional[str]:
         module_name = frame.f_globals.get("__name__", "")
 
         # Check if this is a direct bulk operation call
-        if (
-            "bulk_create" in calling_function
-            or "bulk_update" in calling_function
-        ):
+        if "bulk_create" in calling_function or "bulk_update" in calling_function:
             return module_name.split(".")[-1]
     except Exception:
         pass
@@ -108,8 +103,6 @@ def push_log(
         "user": get_user_details(),
         "extra": extra,
     }
-
-    print("HELLO----------------PAYLOAD", payload)
     logger.audit(message, extra=payload)
 
 
@@ -126,9 +119,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
         original_bulk_update = models.QuerySet.bulk_update
 
         @wraps(original_save)
-        def save_with_signals(
-            self: models.Model, *args: Any, **kwargs: Any
-        ) -> None:
+        def save_with_signals(self: models.Model, *args: Any, **kwargs: Any) -> None:
             is_new = self._state.adding
 
             # Call the original save method
@@ -224,9 +215,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
         # Add M2M signal handling
         for field in model_class._meta.many_to_many:
 
-            @receiver(
-                m2m_changed, sender=getattr(model_class, field.name).through
-            )
+            @receiver(m2m_changed, sender=getattr(model_class, field.name).through)
             def handle_m2m_changed(
                 sender: type[models.Model],
                 instance: models.Model,
@@ -252,19 +241,12 @@ def patch_model_event(model_class: type[models.Model]) -> None:
 
 def setup_model_signals() -> None:
     """Set up signals for all models in the project."""
-    print("SETUP_MODEL_SIGNALS")
     for app_config in apps.get_app_configs():
-        print("APP_CONFIG", app_config)
         for model in app_config.get_models():
-            print("--------------------------------")
-            print("MODEL", model)
-            print("SHOULD_AUDIT", should_audit(model))
-            print("IS_SUBCLASS", issubclass(model, ModelSignalMixin))
             if not should_audit(model):
                 continue
 
             if not issubclass(model, ModelSignalMixin):
-                print("HELLO----------------PATCH_MODEL_EVENT", model)
                 patch_model_event(model)
 
 
