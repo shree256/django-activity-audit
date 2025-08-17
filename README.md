@@ -189,7 +189,7 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
 }
 ```
 ## Project Structure
-```json
+```text
     audit_logging/
         __init__.py
         apps.py
