@@ -5,8 +5,10 @@ import re
 import contextlib
 
 from asgiref.local import Local
+from asgiref.sync import iscoroutinefunction, markcoroutinefunction
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
+
 from .settings import UNREGISTERED_URLS, REGISTERED_URLS
 from .constants import REQUEST_TYPES
 
@@ -105,7 +107,12 @@ class EasyLoggingMiddleware(MiddlewareMixin):
             "execution_time": 0,
         }
 
+        if iscoroutinefunction(self.get_response):
+            markcoroutinefunction(self)
+
     def __call__(self, request):
+        if iscoroutinefunction(self):
+            return self.__acall__(request)
         set_current_request(request)
 
         if not should_log_url(request.path):
@@ -119,9 +126,7 @@ class EasyLoggingMiddleware(MiddlewareMixin):
             "path": request.path,
             "query_params": dict(request.GET.items()),
             "headers": dict(request.headers),
-            "user": str(request.user)
-            if request.user.is_authenticated
-            else None,
+            "user": str(request.user) if request.user.is_authenticated else None,
         }
 
         if request.content_type == "application/json":
@@ -135,9 +140,10 @@ class EasyLoggingMiddleware(MiddlewareMixin):
         response = self.get_response(request)
         end_time = time.time()
 
+        # TODO: Find way to add status code to response_data
+
         # Log response
         response_data = {
-            "status_code": response.status_code,
             "headers": dict(response.headers),
         }
 
@@ -177,9 +183,7 @@ class EasyLoggingMiddleware(MiddlewareMixin):
             "path": request.path,
             "query_params": dict(request.GET.items()),
             "headers": dict(request.headers),
-            "user": str(request.user)
-            if request.user.is_authenticated
-            else None,
+            "user": str(request.user) if request.user.is_authenticated else None,
         }
 
         if request.content_type == "application/json":
@@ -193,9 +197,10 @@ class EasyLoggingMiddleware(MiddlewareMixin):
         response = await self.get_response(request)
         end_time = time.time()
 
+        # TODO: Find way to add status code to response_data
+
         # Log response
         response_data = {
-            "status_code": response.status_code,
             "headers": dict(response.headers),
         }
 

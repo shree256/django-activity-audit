@@ -43,7 +43,7 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "json": get_json_file_formatter(),
+        "json": get_json_formatter(),
         "verbose": get_console_formatter(),
         "api_json": get_api_file_formatter(),
     },
@@ -53,7 +53,7 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
-        "file": get_json_file_handler(level="DEBUG", formatter="json"),
+        "file": get_json_handler(level="DEBUG", formatter="json"),
         "api_file": get_api_file_handler(formatter="api_json"),
     },
     "root": {"level": "DEBUG", "handlers": ["console", "file"]},

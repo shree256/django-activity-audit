@@ -1,35 +1,49 @@
-from django.db.models.signals import post_save, post_delete, m2m_changed
+import logging
+import inspect
+
+from django.db.models.signals import post_delete, m2m_changed
 from django.dispatch import receiver
 from django.apps import apps
 from django.db import models
-from django.contrib.auth import get_user_model
-from django.utils.module_loading import import_string
-import logging
-import inspect
 from functools import wraps
-from typing import Any, Optional, List, Dict
-from easy_logging.middleware import get_current_user
+from typing import Any, Optional, List
+
+from .middleware import get_current_user
+from .settings import UNREGISTERED_CLASSES
 
 logger = logging.getLogger("easy.crud")
-user = get_user_model()
 
-EVENT_TYPES = ["CREATE", "UPDATE", "DELETE", "BULK_CREATE", "BULK_UPDATE"]
+EVENT_TYPES = [
+    "CREATE",
+    "UPDATE",
+    "DELETE",
+    "BULK_CREATE",
+    "BULK_UPDATE",
+    "M2M",
+]
+
+
+def should_audit(instance):
+    """Return True or False to indicate whether the instance should be audited."""
+    # do not audit any model listed in UNREGISTERED_CLASSES
+    for unregistered_class in UNREGISTERED_CLASSES:
+        if isinstance(instance, unregistered_class):
+            return False
+    return True
 
 
 def get_user_details():
     user = get_current_user()
-    data = {}
-    if user:
-        data = {
-            "id": str(user.id),
-            "title": user.title,
-            "email": user.email,
-            "first_name": user.first_name,
-            "middle_name": user.middle_name,
-            "last_name": user.last_name,
-            "sex": user.sex,
-            "date_of_birth": user.date_of_birth,
-        }
+    data = {
+        "id": str(user.id) if hasattr(user, "id") else "",
+        "title": user.title if hasattr(user, "title") else "",
+        "email": user.email if hasattr(user, "email") else "",
+        "first_name": user.first_name if hasattr(user, "first_name") else "",
+        "middle_name": user.middle_name if hasattr(user, "middle_name") else "",
+        "last_name": user.last_name if hasattr(user, "last_name") else "",
+        "sex": user.sex if hasattr(user, "sex") else "",
+        "date_of_birth": user.date_of_birth if hasattr(user, "date_of_birth") else "",
+    }
     return data
 
 
@@ -51,10 +65,7 @@ def get_calling_model() -> Optional[str]:
         module_name = frame.f_globals.get("__name__", "")
 
         # Check if this is a direct bulk operation call
-        if (
-            "bulk_create" in calling_function
-            or "bulk_update" in calling_function
-        ):
+        if "bulk_create" in calling_function or "bulk_update" in calling_function:
             return module_name.split(".")[-1]
     except Exception:
         pass
@@ -95,15 +106,9 @@ def push_log(
     logger.audit(message, extra=payload)
 
 
-def get_changed_fields(
-    instance: models.Model, fields: List[str]
-) -> Dict[str, Any]:
-    """Get the changed field values for an instance."""
-    return {field: getattr(instance, field) for field in fields}
-
-
 def patch_model_event(model_class: type[models.Model]) -> None:
     """Monkey patch a model to add signal handling capabilities."""
+
     if not issubclass(model_class, ModelSignalMixin):
         # Add the mixin to the model's base classes
         model_class.__bases__ = (ModelSignalMixin,) + model_class.__bases__
@@ -114,9 +119,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
         original_bulk_update = models.QuerySet.bulk_update
 
         @wraps(original_save)
-        def save_with_signals(
-            self: models.Model, *args: Any, **kwargs: Any
-        ) -> None:
+        def save_with_signals(self: models.Model, *args: Any, **kwargs: Any) -> None:
             is_new = self._state.adding
 
             # Call the original save method
@@ -129,7 +132,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                 f"{event_type} event for {model_class.__name__} (id: {self.pk})",
                 model_class.__name__,
                 event_type,
-                self.pk,
+                str(self.pk),
                 {},
             )
 
@@ -155,7 +158,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                     f"{EVENT_TYPES[3]} event for {model_class.__name__} (id: {first_obj.pk})",
                     model_class.__name__,
                     EVENT_TYPES[3],
-                    first_obj.pk,
+                    str(first_obj.pk),
                     {
                         "total_count": len(created_objs),
                     },
@@ -165,38 +168,30 @@ def patch_model_event(model_class: type[models.Model]) -> None:
 
         @wraps(original_bulk_update)
         def bulk_update_with_signals(
-            self,
-            objs: List[models.Model],
-            fields: List[str],
-            *args: Any,
-            **kwargs: Any,
+            self, objs: List[models.Model], fields: List[str], batch_size=None
         ) -> None:
             if not objs:
-                return original_bulk_update(self, objs, fields, *args, **kwargs)
+                return original_bulk_update(self, objs, fields, batch_size)
+
+            # Call the original bulk_update method
+            original_bulk_update(self, objs, fields, batch_size)
 
             # Get the calling model
             calling_model = get_calling_model()
             if not calling_model:
-                return original_bulk_update(self, objs, fields, *args, **kwargs)
-
-            # Get the changes for the first object
-            first_obj = objs[0]
-            changes = get_changed_fields(first_obj, fields)
-
-            # Call the original bulk_update method
-            original_bulk_update(self, objs, fields, *args, **kwargs)
+                return original_bulk_update(self, objs, fields, batch_size)
 
             # Log only if this is the calling model
             if calling_model == model_class.__name__:
+                first_obj = objs[0]
                 push_log(
                     f"{EVENT_TYPES[4]} event for {model_class.__name__}",
                     model_class.__name__,
                     EVENT_TYPES[4],
-                    first_obj.pk,
+                    str(first_obj.pk),
                     {
                         "total_count": len(objs),
                         "fields": fields,
-                        "changes": changes,
                     },
                 )
 
@@ -214,15 +209,13 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                 f"{EVENT_TYPES[2]} event for {model_class.__name__} (id: {instance.pk})",
                 model_class.__name__,
                 EVENT_TYPES[2],
-                instance.pk,
+                str(instance.pk),
             )
 
         # Add M2M signal handling
         for field in model_class._meta.many_to_many:
 
-            @receiver(
-                m2m_changed, sender=getattr(model_class, field.name).through
-            )
+            @receiver(m2m_changed, sender=getattr(model_class, field.name).through)
             def handle_m2m_changed(
                 sender: type[models.Model],
                 instance: models.Model,
@@ -237,8 +230,8 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                 push_log(
                     f"M2M {action} event for {model_class.__name__} (id: {instance.pk})",
                     model_class.__name__,
-                    f"M2M_{action.upper()}",
-                    instance.pk,
+                    EVENT_TYPES[5],
+                    str(instance.pk),
                     {
                         "field_name": field_name,
                         "related_ids": list(pk_set) if pk_set else None,
@@ -250,6 +243,9 @@ def setup_model_signals() -> None:
     """Set up signals for all models in the project."""
     for app_config in apps.get_app_configs():
         for model in app_config.get_models():
+            if not should_audit(model):
+                continue
+
             if not issubclass(model, ModelSignalMixin):
                 patch_model_event(model)
 

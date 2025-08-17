@@ -3,7 +3,7 @@ import datetime
 import json
 
 
-class JsonFileFormatter(logging.Formatter):
+class JsonFormatter(logging.Formatter):
     def __init__(self, timestamp_format: str = "%Y-%m-%d %H:%M:%S.%f"):
         super().__init__()
         self.timestamp_format = timestamp_format
@@ -13,9 +13,9 @@ class JsonFileFormatter(logging.Formatter):
         record,
     ):
         log_data = {
-            "timestamp": datetime.datetime.fromtimestamp(
-                record.created
-            ).strftime(self.timestamp_format)[:-3],
+            "timestamp": datetime.datetime.fromtimestamp(record.created).strftime(
+                self.timestamp_format
+            )[:-3],
             "level": record.levelname,
             "name": record.name,
             "path": record.pathname,
@@ -29,9 +29,7 @@ class JsonFileFormatter(logging.Formatter):
 
         # Add exception info if present for ERROR
         if record.exc_info:
-            log_data["exception"] = "{}".format(
-                self.formatException(record.exc_info)
-            )
+            log_data["exception"] = "{}".format(self.formatException(record.exc_info))
 
         # Add request info if available
         if hasattr(record, "request"):
@@ -58,9 +56,9 @@ class APIFormatter(logging.Formatter):
     def format(self, record):
         # Start with basic log data
         log_data = {
-            "timestamp": datetime.datetime.fromtimestamp(
-                record.created
-            ).strftime(self.timestamp_format)[:-3],
+            "timestamp": datetime.datetime.fromtimestamp(record.created).strftime(
+                self.timestamp_format
+            )[:-3],
             "level": record.levelname,
             "name": record.name,
             "message": record.getMessage(),
@@ -90,9 +88,9 @@ class AuditFormatter(logging.Formatter):
 
     def format(self, record):
         log_data = {
-            "timestamp": datetime.datetime.fromtimestamp(
-                record.created
-            ).strftime(self.timestamp_format)[:-3],
+            "timestamp": datetime.datetime.fromtimestamp(record.created).strftime(
+                self.timestamp_format
+            )[:-3],
             "level": record.levelname,
             "name": record.name,
             "message": record.getMessage(),
@@ -103,6 +101,35 @@ class AuditFormatter(logging.Formatter):
             "event_type",
             "instance_id",
             "user",
+            "extra",
+        ]
+
+        for field in audit_fields:
+            log_data[field] = getattr(record, field)
+
+        return json.dumps(log_data)
+
+
+class LoginFormatter(logging.Formatter):
+    def __init__(self, timestamp_format: str = "%Y-%m-%d %H:%M:%S.%f"):
+        super().__init__()
+        self.timestamp_format = timestamp_format
+
+    def format(self, record):
+        log_data = {
+            "timestamp": datetime.datetime.fromtimestamp(record.created).strftime(
+                self.timestamp_format
+            )[:-3],
+            "level": record.levelname,
+            "name": record.name,
+            "message": record.getMessage(),
+        }
+
+        audit_fields = [
+            "user",
+            "event",
+            "success",
+            "error",
             "extra",
         ]
 
