@@ -1,12 +1,13 @@
-[tool.poetry]
+[project]
 name = "easy-audit-logging"
-version = "0.1.28"
+version = "0.1.30"
 description = "A Django package for easy CRUD operation logging and container logs"
+authors = [
+    { name = "Shreeshan", email = "shreeshan256@gmail.com" }
+]
 readme = "README.md"
-license = "MIT"
-homepage = "https://github.com/shree256/easy-audit-logging"
-repository = "https://github.com/shree256/easy-audit-logging"
-documentation = "https://github.com/shree256/easy-audit-logging"
+license = { text = "MIT" }
+keywords = ["logging", "audit", "django", "utilities"]
 
 classifiers = [
     "Environment :: Plugins",
@@ -25,22 +26,28 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-packages = [{include = "easy_logging"}]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-django = ">=4.2,<6.0"
 
-[tool.poetry.group.dev.dependencies]
-pre-commit = [
-    {version = "~3.5", python = "<3.9"},
-    {version = "^3.5", python = ">=3.9"},
+requires-python = ">=3.8"
+dependencies = [
+  "django>=4.2,<6.0",
 ]
-ruff = "^0.1.11"
+
+[project.urls]
+Homepage = "https://github.com/shree256/easy-audit-logging"
+Repository = "https://github.com/shree256/easy-audit-logging"
+Documentation = "https://github.com/shree256/easy-audit-logging"
+
+[project.optional-dependencies]
+dev = [
+  "pre-commit~=3.5; python_version<'3.9'",
+  "pre-commit>=3.5; python_version>='3.9'",
+  "ruff>=0.1.11",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 88
