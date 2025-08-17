@@ -1,4 +1,4 @@
-default_app_config = "easy_audit_logging.apps.EasyLoggingConfig"
+default_app_config = "audit_logging.apps.AuditLoggingConfig"
 
 from audit_logging.utils import (
     get_console_formatter,

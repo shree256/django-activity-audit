@@ -23,11 +23,9 @@ if apps.is_installed("django.contrib.admin"):
 # URL patterns to exclude from logging
 UNREGISTERED_URLS = [r"^/admin/", r"^/static/", r"^/favicon.ico$"]
 UNREGISTERED_URLS = getattr(
-    settings, "easy_audit_logging_UNREGISTERED_URLS_DEFAULT", UNREGISTERED_URLS
+    settings, "audit_logging_UNREGISTERED_URLS_DEFAULT", UNREGISTERED_URLS
 )
-UNREGISTERED_URLS.extend(
-    getattr(settings, "easy_audit_logging_UNREGISTERED_URLS_EXTRA", [])
-)
+UNREGISTERED_URLS.extend(getattr(settings, "audit_logging_UNREGISTERED_URLS_EXTRA", []))
 
 # URL patterns to include in logging (if empty, all URLs are logged)
-REGISTERED_URLS = getattr(settings, "easy_audit_logging_REGISTERED_URLS", [])
+REGISTERED_URLS = getattr(settings, "audit_logging_REGISTERED_URLS", [])

@@ -12,7 +12,7 @@ from django.utils.deprecation import MiddlewareMixin
 from .settings import UNREGISTERED_URLS, REGISTERED_URLS
 from .constants import REQUEST_TYPES
 
-logger = logging.getLogger("easy.request")
+logger = logging.getLogger("audit.request")
 
 _thread_locals = Local()
 
@@ -71,7 +71,7 @@ def should_log_url(url):
     return True
 
 
-class EasyLoggingMiddleware(MiddlewareMixin):
+class AuditLoggingMiddleware(MiddlewareMixin):
     """
     log structure:
     {

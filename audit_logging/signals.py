@@ -11,7 +11,7 @@ from typing import Any, Optional, List
 from .middleware import get_current_user
 from .settings import UNREGISTERED_CLASSES
 
-logger = logging.getLogger("easy.crud")
+logger = logging.getLogger("audit.crud")
 
 EVENT_TYPES = [
     "CREATE",
