@@ -19,11 +19,11 @@ A Django package that extends the default logging mechanism to track CRUD operat
 pip install easy-audit-logging
 ```
 
-2. Add 'easy_logging' to your INSTALLED_APPS in settings.py:
+2. Add 'audit_logging' to your INSTALLED_APPS in settings.py:
 ```python
 INSTALLED_APPS = [
     ...
-    'easy_logging',
+    'audit_logging',
 ]
 ```
 
@@ -31,13 +31,13 @@ INSTALLED_APPS = [
 ```python
 MIDDLEWARE = [
     ...
-    'easy_logging.middleware.EasyLoggingMiddleware',
+    'audit_logging.middleware.EasyLoggingMiddleware',
 ]
 ```
 
 4. Configure logging in settings.py:
 ```python
-from easy_logging import *
+from audit_logging import *
 
 LOGGING = {
     "version": 1,

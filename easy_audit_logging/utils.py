@@ -10,25 +10,25 @@ def get_console_formatter() -> dict:
 
 def get_json_formatter() -> dict:
     return {
-        "()": "easy_logging.formatters.JsonFormatter",
+        "()": "easy_audit_logging.formatters.JsonFormatter",
     }
 
 
 def get_api_formatter() -> dict:
     return {
-        "()": "easy_logging.formatters.APIFormatter",
+        "()": "easy_audit_logging.formatters.APIFormatter",
     }
 
 
 def get_audit_formatter() -> dict:
     return {
-        "()": "easy_logging.formatters.AuditFormatter",
+        "()": "easy_audit_logging.formatters.AuditFormatter",
     }
 
 
 def get_login_formatter() -> dict:
     return {
-        "()": "easy_logging.formatters.LoginFormatter",
+        "()": "easy_audit_logging.formatters.LoginFormatter",
     }
 
 
@@ -55,7 +55,7 @@ def get_api_handler(
 ) -> dict:
     return {
         "level": API,
-        "class": "easy_logging.handlers.EasyLogHandler",
+        "class": "easy_audit_logging.handlers.EasyLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
@@ -69,7 +69,7 @@ def get_audit_handler(
 ) -> dict:
     return {
         "level": AUDIT,
-        "class": "easy_logging.handlers.EasyLogHandler",
+        "class": "easy_audit_logging.handlers.EasyLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
@@ -83,7 +83,7 @@ def get_login_handler(
 ) -> dict:
     return {
         "level": LOGIN,
-        "class": "easy_logging.handlers.EasyLogHandler",
+        "class": "easy_audit_logging.handlers.EasyLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
