@@ -1,5 +1,5 @@
-Audit Logging
-=============
+Django Activity Audit
+=====================
 
 A Django package that extends the default logging mechanism to track CRUD operations and container logs.
 
@@ -19,25 +19,25 @@ Installation
 
 1. Install the package::
 
-    pip install audit-logging
+    pip install django-activity-audit
 
-2. Add ``audit_logging`` to your ``INSTALLED_APPS`` in ``settings.py``::
+2. Add ``django_activity_audit`` to your ``INSTALLED_APPS`` in ``settings.py``::
 
     INSTALLED_APPS = [
         ...
-        'audit_logging',
+        'django_activity_audit',
     ]
 
 3. Add the middleware to your ``MIDDLEWARE`` in ``settings.py``::
 
     MIDDLEWARE = [
         ...
-        'audit_logging.middleware.AuditLoggingMiddleware',
+        'django_activity_audit.middleware.AuditLoggingMiddleware',
     ]
 
 4. Configure logging in ``settings.py``::
 
-    from audit_logging import *
+    from django_activity_audit import *
 
     LOGGING = {
         "version": 1,

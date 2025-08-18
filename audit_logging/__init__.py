@@ -1,6 +1,6 @@
-default_app_config = "audit_logging.apps.AuditLoggingConfig"
+default_app_config = "django_activity_audit.apps.AuditLoggingConfig"
 
-from audit_logging.utils import (
+from django_activity_audit.utils import (
     get_console_formatter,
     get_json_formatter,
     get_json_handler,

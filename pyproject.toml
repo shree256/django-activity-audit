@@ -1,5 +1,5 @@
 [project]
-name = "audit-logging"
+name = "django-activity-audit"
 version = "0.0.2"
 description = "A Django package for easy CRUD operation logging and container logs"
 authors = [
@@ -34,9 +34,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/shree256/audit-logging"
-Repository = "https://github.com/shree256/audit-logging"
-Documentation = "https://github.com/shree256/audit-logging"
+Homepage = "https://github.com/shree256/django-activity-audit"
+Repository = "https://github.com/shree256/django-activity-audit"
+Documentation = "https://github.com/shree256/django-activity-audit"
 
 [project.optional-dependencies]
 dev = [

@@ -3,7 +3,7 @@ include README.md
 include pyproject.toml
 include setup.py
 
-recursive-include audit_logging *.py
-recursive-include audit_logging *.md
-recursive-include audit_logging *.txt
-recursive-include audit_logging *.json 
+recursive-include django_activity_audit *.py
+recursive-include django_activity_audit *.md
+recursive-include django_activity_audit *.txt
+recursive-include django_activity_audit *.json 

@@ -1,4 +1,4 @@
-# Audit Logging
+# Django Activity Audit
 
 A Django package that extends the default logging mechanism to track CRUD operations and container logs.
 
@@ -16,14 +16,14 @@ A Django package that extends the default logging mechanism to track CRUD operat
 
 1. Install the package:
 ```bash
-pip install audit-logging
+pip install django-activity-audit
 ```
 
-2. Add 'audit_logging' to your INSTALLED_APPS in settings.py:
+2. Add 'django_activity_audit' to your INSTALLED_APPS in settings.py:
 ```python
 INSTALLED_APPS = [
     ...
-    'audit_logging',
+    'django_activity_audit',
 ]
 ```
 
@@ -31,13 +31,13 @@ INSTALLED_APPS = [
 ```python
 MIDDLEWARE = [
     ...
-    'audit_logging.middleware.AuditLoggingMiddleware',
+    'django_activity_audit.middleware.AuditLoggingMiddleware',
 ]
 ```
 
 4. Configure logging in settings.py:
 ```python
-from audit_logging import *
+from django_activity_audit import *
 
 LOGGING = {
     "version": 1,
@@ -190,7 +190,7 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
 ```
 ## Project Structure
 ```text
-    audit_logging/
+    django_activity_audit/
         __init__.py
         apps.py
         constants.py
