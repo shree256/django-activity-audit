@@ -181,12 +181,12 @@ class SFTPClient:
                     result = f"{filename} uploaded successfully to {path_to_folder}"
                     logger.info(f"{result}")
                 except Exception as e:
-                    self.log_payload["error_message"] = (
-                        f"File upload failed. Error: {str(e)}"
-                    )
-            self.log_payload["error_message"] = (
-                f"Path validation failed. Error: {str(error)}"
-            )
+                    self.log_payload[
+                        "error_message"
+                    ] = f"File upload failed. Error: {str(e)}"
+            self.log_payload[
+                "error_message"
+            ] = f"Path validation failed. Error: {str(error)}"
         else:
             self.log_payload["error_message"] = "Connection not established"
 

@@ -80,13 +80,17 @@ class ModelSignalMixin:
         self._original_m2m = self._get_m2m_state()
 
     def _get_m2m_state(self) -> dict:
-        """Get the current state of M2M fields."""
-        return {
-            field.name: set(
-                getattr(self, field.name).all().values_list("id", flat=True)
-            )
-            for field in self._meta.many_to_many
-        }
+        try:
+            """Get the current state of M2M fields."""
+            return {
+                field.name: set(
+                    getattr(self, field.name).all().values_list("id", flat=True)
+                )
+                for field in self._meta.many_to_many
+            }
+        except Exception as e:
+            logger.error(f"Error getting M2M state: {e}")
+            return {}
 
 
 def push_log(
