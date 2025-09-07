@@ -1,8 +1,8 @@
-import time
-import paramiko
 import logging
+import time
+from typing import Optional, Tuple
 
-from typing import Tuple, Optional
+import paramiko
 from requests.sessions import Session
 
 from .constants import REQUEST_TYPES

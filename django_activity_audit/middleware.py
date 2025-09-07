@@ -1,16 +1,16 @@
-import time
-import logging
-import json
-import re
 import contextlib
+import json
+import logging
+import re
+import time
 
 from asgiref.local import Local
 from asgiref.sync import iscoroutinefunction, markcoroutinefunction
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
-from .settings import UNREGISTERED_URLS, REGISTERED_URLS
 from .constants import REQUEST_TYPES
+from .settings import REGISTERED_URLS, UNREGISTERED_URLS
 
 logger = logging.getLogger("audit.request")
 

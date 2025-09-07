@@ -105,6 +105,7 @@ def push_usage_log(message: str, event: str, success: bool, error: str, extra: d
         }
     """
     import logging
+
     from .signals import get_user_details
 
     logger = logging.getLogger("audit.login")

@@ -1,12 +1,12 @@
-import logging
+from functools import wraps
 import inspect
+import logging
+from typing import Any, List, Optional
 
-from django.db.models.signals import post_delete, m2m_changed
-from django.dispatch import receiver
 from django.apps import apps
 from django.db import models
-from functools import wraps
-from typing import Any, Optional, List
+from django.db.models.signals import m2m_changed, post_delete
+from django.dispatch import receiver
 
 from .middleware import get_current_user
 from .settings import UNREGISTERED_CLASSES
