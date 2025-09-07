@@ -238,7 +238,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                     str(instance.pk),
                     {
                         "field_name": field_name,
-                        "related_ids": list(pk_set) if pk_set else None,
+                        "related_ids": list(map(str, pk_set)) if pk_set else None,
                     },
                 )
 
