@@ -11,6 +11,7 @@ A Django package that extends the default logging mechanism to track CRUD operat
 - Human-readable container logs
 - Separate log files for audit and container logs
 - Console and file output options
+- **Async logging with QueueHandler** for non-blocking performance
 
 ## Installation
 
@@ -84,6 +85,32 @@ class ExternalService(HTTPClient):
 ```
 
 7. Create ```audit_logs``` folder in project directory
+
+## Async Logging Architecture
+
+The package supports async logging using QueueHandler for better performance:
+
+```
+logger (audit.request) 
+       │
+       ▼
+AsyncAuditLogHandler (QueueHandler)
+       │  <-- pushes record
+       ▼
+log_queue
+       │  <-- pulled by background thread
+       ▼
+QueueListener
+       │
+       ▼
+AuditLogHandler (writes to file)
+```
+
+**Benefits:**
+- Non-blocking I/O operations
+- Better performance under high load
+- Log records are queued and processed in background threads
+- No impact on main application thread
 
 ## Log Types
 

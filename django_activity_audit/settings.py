@@ -31,3 +31,11 @@ UNREGISTERED_URLS.extend(
 
 # URL patterns to include in logging (if empty, all URLs are logged)
 REGISTERED_URLS = getattr(settings, "django_activity_audit_REGISTERED_URLS", [])
+
+AUDIT_LOGGING = {
+    "API_LOG_FILE": "audit_logs/api.log",
+    "AUDIT_LOG_FILE": "audit_logs/audit.log",
+    "LOGIN_LOG_FILE": "audit_logs/login.log",
+    "MAX_BYTES": 10 * 1024 * 1024,  # 10 MB
+    "BACKUP_COUNT": 5,
+}
