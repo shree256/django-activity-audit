@@ -95,7 +95,10 @@ Console Log Format::
     -----------------------------------------------------------------------------
     INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_with_contacts_and_diseases Patient 'd6c9a056-0b57-453a-8c0f-44319004b761 - Patient3' created.
 
-File Log Format::
+APP Log 
+-------
+
+::
 
     {
         "timestamp": "2025-05-15 13:38:02.141",
