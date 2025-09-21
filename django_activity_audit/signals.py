@@ -1,6 +1,7 @@
-from functools import wraps
 import inspect
 import logging
+
+from functools import wraps
 from typing import Any, List, Optional
 
 from django.apps import apps
@@ -8,7 +9,7 @@ from django.db import models
 from django.db.models.signals import m2m_changed, post_delete
 from django.dispatch import receiver
 
-from .middleware import get_current_user
+from .middleware import get_user_details
 from .settings import UNREGISTERED_CLASSES
 
 logger = logging.getLogger("audit.crud")
@@ -30,21 +31,6 @@ def should_audit(instance):
         if isinstance(instance, unregistered_class):
             return False
     return True
-
-
-def get_user_details():
-    user = get_current_user()
-    id = str(user.id) if hasattr(user, "id") else ""
-    info = {
-        "title": user.title if hasattr(user, "title") else "",
-        "email": user.email if hasattr(user, "email") else "",
-        "first_name": user.first_name if hasattr(user, "first_name") else "",
-        "middle_name": user.middle_name if hasattr(user, "middle_name") else "",
-        "last_name": user.last_name if hasattr(user, "last_name") else "",
-        "sex": user.sex if hasattr(user, "sex") else "",
-        "date_of_birth": user.date_of_birth if hasattr(user, "date_of_birth") else "",
-    }
-    return id, info
 
 
 def get_calling_model() -> Optional[str]:

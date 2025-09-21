@@ -69,6 +69,8 @@ class APIFormatter(logging.Formatter):
             "service_name",
             "request_type",
             "protocol",
+            "user_id",
+            "user_info",
             "request_repr",
             "response_repr",
             "error_message",
@@ -100,7 +102,8 @@ class AuditFormatter(logging.Formatter):
             "model",
             "event_type",
             "instance_id",
-            "user",
+            "user_id",
+            "user_info",
             "extra",
         ]
 
@@ -126,7 +129,8 @@ class LoginFormatter(logging.Formatter):
         }
 
         audit_fields = [
-            "user",
+            "user_id",
+            "user_info",
             "event",
             "success",
             "error",

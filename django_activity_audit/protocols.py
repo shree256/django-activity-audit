@@ -1,11 +1,14 @@
 import logging
 import time
+
 from typing import Optional, Tuple
 
 import paramiko
+
 from requests.sessions import Session
 
 from .constants import REQUEST_TYPES
+from .middleware import get_user_details
 
 logger = logging.getLogger("audit.request")
 
@@ -13,23 +16,33 @@ PROTOCOLS = ("http", "sftp")
 OPERATIONS = ("upload", "download")
 THIRTY_SECONDS_TIMEOUT = 30
 
-"""
+f"""
     log structure:
     {
-        "timestamp": "2021-01-01 12:00:00.000",
+    "timestamp": "2021-01-01 12:00:00.000",
         "level": "INFO",
         "name": "audit.request",
         "request_type": "external",
         "service_name": "default",
         "protocol": "http",
+        "user_id": "",
+        "user_info": {
+        "title": "",
+            "email": "",
+            "first_name": "",
+            "middle_name": "",
+            "last_name": "",
+            "sex": "",
+            "date_of_birth": "",
+        },
         "request_repr": {
-            "endpoint": "https://example.com/api/v1/users",
+        "endpoint": "https://example.com/api/v1/users",
             "method": "GET",
             "headers": {"Content-Type": "application/json"},
             "body": {"name": "John Doe", "email": "john.doe@example.com"},
         },
         "response_repr": {
-            "status_code": 200,
+        "status_code": 200,
             "body": {"name": "John Doe", "email": "john.doe@example.com"},
         },
         "error_message": "",
@@ -45,6 +58,8 @@ class HTTPClient(Session):
             "service_name": service_name,
             "protocol": PROTOCOLS[0],
             "request_type": REQUEST_TYPES[1],
+            "user_id": "",
+            "user_info": {},
             "request_repr": {},
             "response_repr": {},
             "error_message": "",
@@ -57,6 +72,10 @@ class HTTPClient(Session):
         data = kwargs.get("data", {})
         error = None
         response = None
+        user_id, user_info = get_user_details()
+
+        self.log_payload["user_id"] = user_id
+        self.log_payload["user_info"] = user_info
 
         request_repr = {
             "endpoint": url,
@@ -110,6 +129,8 @@ class SFTPClient:
             "service_name": service_name,
             "request_type": REQUEST_TYPES[1],
             "protocol": PROTOCOLS[1],
+            "user_id": "",
+            "user_info": {},
             "request_repr": {
                 "host": host,
                 "operation": None,
@@ -165,6 +186,10 @@ class SFTPClient:
         start_time = time.time()
         result = ""
 
+        user_id, user_info = get_user_details()
+
+        self.log_payload["user_id"] = user_id
+        self.log_payload["user_info"] = user_info
         self.log_payload["request_repr"]["operation"] = OPERATIONS[0]
         self.log_payload["request_repr"]["remote_path"] = path_to_folder
         self.log_payload["request_repr"]["filename"] = filename
@@ -181,12 +206,12 @@ class SFTPClient:
                     result = f"{filename} uploaded successfully to {path_to_folder}"
                     logger.info(f"{result}")
                 except Exception as e:
-                    self.log_payload[
-                        "error_message"
-                    ] = f"File upload failed. Error: {str(e)}"
-            self.log_payload[
-                "error_message"
-            ] = f"Path validation failed. Error: {str(error)}"
+                    self.log_payload["error_message"] = (
+                        f"File upload failed. Error: {str(e)}"
+                    )
+            self.log_payload["error_message"] = (
+                f"Path validation failed. Error: {str(error)}"
+            )
         else:
             self.log_payload["error_message"] = "Connection not established"
 

@@ -47,6 +47,24 @@ def set_current_user(user):
         _thread_locals.request = request
 
 
+def get_user_details():
+    user = get_current_user()
+    if user is None:
+        return "", {}
+
+    id = str(user.id) if hasattr(user, "id") else ""
+    info = {
+        "title": user.title if hasattr(user, "title") else "",
+        "email": user.email if hasattr(user, "email") else "",
+        "first_name": user.first_name if hasattr(user, "first_name") else "",
+        "middle_name": user.middle_name if hasattr(user, "middle_name") else "",
+        "last_name": user.last_name if hasattr(user, "last_name") else "",
+        "sex": user.sex if hasattr(user, "sex") else "",
+        "date_of_birth": user.date_of_birth if hasattr(user, "date_of_birth") else "",
+    }
+    return id, info
+
+
 def clear_request():
     with contextlib.suppress(AttributeError):
         del _thread_locals.request
@@ -101,6 +119,8 @@ class AuditLoggingMiddleware(MiddlewareMixin):
             "service_name": "review_board",
             "request_type": REQUEST_TYPES[0],
             "protocol": None,
+            "user_id": "",
+            "user_info": {},
             "request_repr": {},
             "response_repr": {},
             "error_message": None,
@@ -126,7 +146,6 @@ class AuditLoggingMiddleware(MiddlewareMixin):
             "path": request.path,
             "query_params": dict(request.GET.items()),
             "headers": dict(request.headers),
-            "user": str(request.user) if request.user.is_authenticated else None,
         }
 
         if request.content_type == "application/json":
@@ -139,6 +158,11 @@ class AuditLoggingMiddleware(MiddlewareMixin):
         # Get response
         response = self.get_response(request)
         end_time = time.time()
+
+        # Capture user details AFTER authentication has happened
+        user_id, user_info = get_user_details()
+        self.log_data["user_id"] = user_id
+        self.log_data["user_info"] = user_info
 
         # TODO: Find way to add status code to response_data
 
@@ -183,7 +207,6 @@ class AuditLoggingMiddleware(MiddlewareMixin):
             "path": request.path,
             "query_params": dict(request.GET.items()),
             "headers": dict(request.headers),
-            "user": str(request.user) if request.user.is_authenticated else None,
         }
 
         if request.content_type == "application/json":
@@ -196,6 +219,11 @@ class AuditLoggingMiddleware(MiddlewareMixin):
         # Get response
         response = await self.get_response(request)
         end_time = time.time()
+
+        # Capture user details AFTER authentication has happened
+        user_id, user_info = get_user_details()
+        self.log_data["user_id"] = user_id
+        self.log_data["user_info"] = user_info
 
         # TODO: Find way to add status code to response_data
 
