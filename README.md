@@ -147,6 +147,16 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
     "service_name": "review_board",
     "request_type": "internal",
     "protocol": "http",
+    "user_id": "14ab1197-ebdd-4300-a618-5910e0219936",
+    "user_info": {
+        "title": "mr",
+        "email": "example@email.com",
+        "first_name": "mohanlal",
+        "middle_name": "",
+        "last_name": "nair",
+        "sex": "male",
+        "date_of_birth": "21/30/1939"
+    },
     "request_repr": {
         "method": "GET",
         "path": "/api/v1/health/",
@@ -183,28 +193,34 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
     "service_name": "apollo",
     "request_type": "external",
     "protocol": "http",
-    "request_repr": "{'endpoint': 'https://www.sample.com', 'method': 'GET', 'headers': {}, 'body': {}}",
-    "response_repr": "{'status_code': 200, 'body': {'title': 'title', 'expiresIn': 3600, 'error': None, 'errorDescription': None}}",
+    "user_id": "14ab1197-ebdd-4300-a618-5910e0219936",
+    "user_info": {
+        "title": "mr",
+        "email": "example@email.com",
+        "first_name": "mohanlal",
+        "middle_name": "",
+        "last_name": "nair",
+        "sex": "male",
+        "date_of_birth": "21/30/1939"
+    },
+    "request_repr": {
+        "endpoint": "example.com",
+        "method": "GET",
+        "headers": {},
+        "body": {}
+    },
+    "response_repr": {
+        "status_code": 200,
+        "body": {
+            "title": "title",
+            "expiresIn": 3600,
+            "error": "",
+            "errorDescription": ""
+        }
+    },
     "error_message": "",
     "execution_time": 5.16809344291687
 }
-```
-## Project Structure
-```text
-    django_activity_audit/
-        __init__.py
-        apps.py
-        constants.py
-        logging.py
-        middleware.py
-        signals.py
-        handlers.py
-        utils.py
-        tests.py
-    setup.py
-    README.md
-    LICENSE
-    MANIFEST.in
 ```
 
 ## Notes
@@ -219,9 +235,9 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
 
 ## Related Tools
 
-- `Vector.dev <https://vector.dev/>`_
-- `ClickHouse <https://clickhouse.com/>`_ 
-- `Grafana <https://grafana.com/>`_
+- [Vector.dev](https://vector.dev/)
+- [ClickHouse](https://clickhouse.com/)
+- [Grafana](https://grafana.com/)
 
 ## License
 
