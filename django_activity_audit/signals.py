@@ -34,8 +34,8 @@ def should_audit(instance):
 
 def get_user_details():
     user = get_current_user()
-    data = {
-        "id": str(user.id) if hasattr(user, "id") else "",
+    id = str(user.id) if hasattr(user, "id") else ""
+    info = {
         "title": user.title if hasattr(user, "title") else "",
         "email": user.email if hasattr(user, "email") else "",
         "first_name": user.first_name if hasattr(user, "first_name") else "",
@@ -44,7 +44,7 @@ def get_user_details():
         "sex": user.sex if hasattr(user, "sex") else "",
         "date_of_birth": user.date_of_birth if hasattr(user, "date_of_birth") else "",
     }
-    return data
+    return id, info
 
 
 def get_calling_model() -> Optional[str]:
@@ -100,11 +100,13 @@ def push_log(
     instance_id: str,
     extra: dict = {},
 ) -> None:
+    user_id, user_info = get_user_details()
     payload: dict = {
         "model": model,
         "instance_id": str(instance_id),
         "event_type": event_type,
-        "user": get_user_details(),
+        "user_id": user_id,
+        "user_info": user_info,
         "extra": extra,
     }
     logger.audit(message, extra=payload)

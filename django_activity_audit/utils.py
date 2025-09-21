@@ -109,9 +109,11 @@ def push_usage_log(message: str, event: str, success: bool, error: str, extra: d
     from .signals import get_user_details
 
     logger = logging.getLogger("audit.login")
+    user_id, user_info = get_user_details()
 
     data = {
-        "user": get_user_details(),
+        "user_id": user_id,
+        "user_info": user_info,
         "event": event,
         "success": success,
         "error": error,
