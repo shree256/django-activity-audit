@@ -19,11 +19,11 @@ A Django package that extends the default logging mechanism to track CRUD operat
 pip install django-activity-audit
 ```
 
-2. Add 'django_activity_audit' to your INSTALLED_APPS in settings.py:
+2. Add 'activity_audit' to your INSTALLED_APPS in settings.py:
 ```python
 INSTALLED_APPS = [
     ...
-    'django_activity_audit',
+    'activity_audit',
 ]
 ```
 
@@ -31,13 +31,13 @@ INSTALLED_APPS = [
 ```python
 MIDDLEWARE = [
     ...
-    'django_activity_audit.middleware.AuditLoggingMiddleware',
+    'activity_audit.middleware.AuditLoggingMiddleware',
 ]
 ```
 
 4. Configure logging in settings.py:
 ```python
-from django_activity_audit import *
+from activity_audit import *
 
 LOGGING = {
     "version": 1,
@@ -117,7 +117,7 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
 {
     "timestamp": "2025-08-16 17:06:32.403",
     "level": "AUDIT",
-    "name": "audit.crud",
+    "name": "audit.model",
     "message": "CREATE event for User (id: 6f77b814-f9c1-4cab-a737-6677734bc303)",
     "model": "User",
     "event_type": "CREATE",

@@ -16,7 +16,7 @@ PROTOCOLS = ("http", "sftp")
 OPERATIONS = ("upload", "download")
 THIRTY_SECONDS_TIMEOUT = 30
 
-f"""
+"""
     log structure:
     {
     "timestamp": "2021-01-01 12:00:00.000",

@@ -21,23 +21,23 @@ Installation
 
     pip install django-activity-audit
 
-2. Add ``django_activity_audit`` to your ``INSTALLED_APPS`` in ``settings.py``::
+2. Add ``activity_audit`` to your ``INSTALLED_APPS`` in ``settings.py``::
 
     INSTALLED_APPS = [
         ...
-        'django_activity_audit',
+        'activity_audit',
     ]
 
 3. Add the middleware to your ``MIDDLEWARE`` in ``settings.py``::
 
     MIDDLEWARE = [
         ...
-        'django_activity_audit.middleware.AuditLoggingMiddleware',
+        'activity_audit.middleware.AuditLoggingMiddleware',
     ]
 
 4. Configure logging in ``settings.py``::
 
-    from django_activity_audit import *
+    from activity_audit import *
 
     LOGGING = {
         "version": 1,
@@ -121,7 +121,7 @@ CRUD Log
     {
         "timestamp": "2025-08-16 17:06:32.403",
         "level": "AUDIT",
-        "name": "audit.crud",
+        "name": "audit.model",
         "message": "CREATE event for User (id: 6f77b814-f9c1-4cab-a737-6677734bc303)",
         "model": "User",
         "event_type": "CREATE",

@@ -10,25 +10,25 @@ def get_console_formatter() -> dict:
 
 def get_json_formatter() -> dict:
     return {
-        "()": "django_activity_audit.formatters.JsonFormatter",
+        "()": "activity_audit.formatters.JsonFormatter",
     }
 
 
 def get_api_formatter() -> dict:
     return {
-        "()": "django_activity_audit.formatters.APIFormatter",
+        "()": "activity_audit.formatters.APIFormatter",
     }
 
 
 def get_audit_formatter() -> dict:
     return {
-        "()": "django_activity_audit.formatters.AuditFormatter",
+        "()": "activity_audit.formatters.AuditFormatter",
     }
 
 
 def get_login_formatter() -> dict:
     return {
-        "()": "django_activity_audit.formatters.LoginFormatter",
+        "()": "activity_audit.formatters.LoginFormatter",
     }
 
 
@@ -55,7 +55,7 @@ def get_api_handler(
 ) -> dict:
     return {
         "level": API,
-        "class": "django_activity_audit.handlers.AuditLogHandler",
+        "class": "activity_audit.handlers.AuditLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
@@ -69,7 +69,7 @@ def get_audit_handler(
 ) -> dict:
     return {
         "level": AUDIT,
-        "class": "django_activity_audit.handlers.AuditLogHandler",
+        "class": "activity_audit.handlers.AuditLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
@@ -83,7 +83,7 @@ def get_login_handler(
 ) -> dict:
     return {
         "level": LOGIN,
-        "class": "django_activity_audit.handlers.AuditLogHandler",
+        "class": "activity_audit.handlers.AuditLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,

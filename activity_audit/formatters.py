@@ -108,7 +108,7 @@ class AuditFormatter(logging.Formatter):
         ]
 
         for field in audit_fields:
-            log_data[field] = getattr(record, field)
+            log_data[field] = getattr(record, field, "")
 
         return json.dumps(log_data)
 
