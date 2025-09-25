@@ -6,7 +6,12 @@ from typing import Any, List, Optional
 
 from django.apps import apps
 from django.db import models
-from django.db.models.signals import m2m_changed, post_delete
+from django.db.models.signals import (
+    m2m_changed,
+    post_delete,
+    pre_save,
+    pre_delete,
+)
 from django.dispatch import receiver
 
 from .middleware import get_user_details
@@ -21,6 +26,9 @@ EVENT_TYPES = [
     "BULK_CREATE",
     "BULK_UPDATE",
     "M2M",
+    "PRE_CREATE",
+    "PRE_UPDATE",
+    "PRE_DELETE",
 ]
 
 
@@ -191,6 +199,46 @@ def patch_model_event(model_class: type[models.Model]) -> None:
         model_class.save = save_with_signals
         models.QuerySet.bulk_create = bulk_create_with_signals
         models.QuerySet.bulk_update = bulk_update_with_signals
+
+        # Add pre_save signal handling
+        @receiver(pre_save, sender=model_class)
+        def handle_pre_save(
+            sender: type[models.Model], instance: models.Model, **kwargs: Any
+        ) -> None:
+            if not should_audit(instance):
+                return
+
+            is_new = instance._state.adding
+            event_type = (
+                EVENT_TYPES[6] if is_new else EVENT_TYPES[7]
+            )  # PRE_CREATE or PRE_UPDATE
+
+            # For new instances, we might not have a pk yet, so use a placeholder
+            instance_id = str(instance.pk) if instance.pk else "pending"
+
+            push_log(
+                f"{event_type} event for {model_class.__name__} (id: {instance_id})",
+                model_class.__name__,
+                event_type,
+                instance_id,
+                {},
+            )
+
+        # Add pre_delete signal handling
+        @receiver(pre_delete, sender=model_class)
+        def handle_pre_delete(
+            sender: type[models.Model], instance: models.Model, **kwargs: Any
+        ) -> None:
+            if not should_audit(instance):
+                return
+
+            push_log(
+                f"{EVENT_TYPES[8]} event for {model_class.__name__} (id: {instance.pk})",
+                model_class.__name__,
+                EVENT_TYPES[8],  # PRE_DELETE
+                str(instance.pk),
+                {},
+            )
 
         # Add delete signal handling
         @receiver(post_delete, sender=model_class)
