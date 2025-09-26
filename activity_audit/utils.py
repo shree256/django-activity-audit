@@ -14,24 +14,6 @@ def get_json_formatter() -> dict:
     }
 
 
-def get_api_formatter() -> dict:
-    return {
-        "()": "activity_audit.formatters.APIFormatter",
-    }
-
-
-def get_audit_formatter() -> dict:
-    return {
-        "()": "activity_audit.formatters.AuditFormatter",
-    }
-
-
-def get_login_formatter() -> dict:
-    return {
-        "()": "activity_audit.formatters.LoginFormatter",
-    }
-
-
 def get_json_handler(
     level: str,
     filename: str = "audit_logs/app.log",
@@ -51,43 +33,34 @@ def get_json_handler(
 
 def get_api_handler(
     filename: str = "audit_logs/api.log",
-    formatter: str = "api_json",
 ) -> dict:
     return {
-        "level": API,
-        "class": "activity_audit.handlers.AuditLogHandler",
+        "class": "activity_audit.handlers.APILogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
-        "formatter": formatter,
     }
 
 
 def get_audit_handler(
     filename: str = "audit_logs/audit.log",
-    formatter: str = "audit_json",
 ) -> dict:
     return {
-        "level": AUDIT,
         "class": "activity_audit.handlers.AuditLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
-        "formatter": formatter,
     }
 
 
 def get_login_handler(
     filename: str = "audit_logs/login.log",
-    formatter: str = "login_json",
 ) -> dict:
     return {
-        "level": LOGIN,
-        "class": "activity_audit.handlers.AuditLogHandler",
+        "class": "activity_audit.handlers.LoginLogHandler",
         "filename": filename,
-        "maxBytes": 1024 * 1024 * 10,  # 10MB
+        "maxBytes": 1024 * 1024 * 5,  # 5MB
         "backupCount": 5,
-        "formatter": formatter,
     }
 
 
