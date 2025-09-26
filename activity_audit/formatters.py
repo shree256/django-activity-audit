@@ -102,6 +102,7 @@ class AuditFormatter(logging.Formatter):
             "model",
             "event_type",
             "instance_id",
+            "instance_repr",
             "user_id",
             "user_info",
             "extra",
