@@ -23,21 +23,12 @@ class JsonFormatter(logging.Formatter):
             "function": record.funcName,
             "message": record.getMessage(),
             "exception": "",
-            "request": "",
             "extra": "",
         }
 
         # Add exception info if present for ERROR
         if record.exc_info:
             log_data["exception"] = "{}".format(self.formatException(record.exc_info))
-
-        # Add request info if available
-        if hasattr(record, "request"):
-            log_data["request"] = {
-                "method": getattr(record.request, "method", None),
-                "path": getattr(record.request, "path", None),
-                "user": str(getattr(record.request, "user", None)),
-            }
 
         # Add extra fields if present
         if hasattr(record, "extra"):

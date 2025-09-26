@@ -107,7 +107,6 @@ def push_log(
         "extra": extra,
     }
 
-    print("Push log payload:", payload)
     logger.audit(message, extra=payload)
 
 
