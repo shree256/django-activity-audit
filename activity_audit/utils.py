@@ -1,5 +1,4 @@
 from .constants import CONSOLE_FORMAT
-from .logger_levels import API, AUDIT, LOGIN
 
 
 def get_console_formatter() -> dict:

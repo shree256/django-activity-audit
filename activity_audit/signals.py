@@ -9,11 +9,10 @@ from django.db import models
 from django.db.models.signals import (
     m2m_changed,
     post_delete,
-    pre_save,
     pre_delete,
+    pre_save,
 )
 from django.dispatch import receiver
-from django.core import serializers
 from django.forms.models import model_to_dict
 
 from .middleware import get_user_details
