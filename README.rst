@@ -45,7 +45,6 @@ Installation
         "formatters": {
             "json": get_json_formatter(),
             "verbose": get_console_formatter(),
-            "api_json": get_api_file_formatter(),
         },
         "handlers": {
             "console": {
@@ -54,7 +53,7 @@ Installation
                 "formatter": "verbose",
             },
             "file": get_json_handler(level="DEBUG", formatter="json"),
-            "api_file": get_api_file_handler(formatter="api_json"),
+            "api_file": get_api_file_handler(),
         },
         "root": {"level": "DEBUG", "handlers": ["console", "file"]},
         "loggers": {
@@ -108,9 +107,7 @@ APP Log
         "module": "auth",
         "function": "add_auth",
         "message": "Calculating signature using v4 auth.",
-        "exception": "",
-        "request": "",
-        "extra_fields": ""
+        "exception": ""
     }
 
 CRUD Log
@@ -126,15 +123,20 @@ CRUD Log
         "model": "User",
         "event_type": "CREATE",
         "instance_id": "6f77b814-f9c1-4cab-a737-6677734bc303",
+        "instance_repr" : {
+            "name": "Test Model",
+            "is_active": true,
+            "created_at": "2025-08-29T08:18:54Z",
+            "updated_at": "2025-08-29T08:18:54Z"
+        },
         "user": {
             "id": "cae8ffb4-ba52-409c-9a6f-e10362bfaf97",
-            "title": "",
+            "title": "mr",
             "email": "example@source.com",
-            "first_name": "",
-            "middle_name": "",
-            "last_name": "",
-            "sex": "",
-            "date_of_birth": null
+            "first_name": "mohamlal",
+            "middle_name": "v",
+            "last_name": "nair",
+            "sex": "m",
         },
         "extra": {}
     }

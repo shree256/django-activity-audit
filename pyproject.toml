@@ -1,6 +1,6 @@
 [project]
 name = "django-activity-audit"
-version = "1.1.0"
+version = "1.2.2"
 description = "A Django package for easy CRUD operation logging and container logs"
 authors = [
     { name = "Shreeshan", email = "shreeshan256@gmail.com" }
@@ -48,6 +48,19 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "tests/",
+  "Makefile",
+]
+
+[tool.hatch.build.targets.wheel]
+exclude = [
+  "tests/",
+  "Makefile",
+]
+packages = ["activity_audit"]
 
 [tool.ruff]
 line-length = 88
