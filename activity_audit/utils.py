@@ -64,7 +64,13 @@ def get_login_handler(
     }
 
 
-def push_usage_log(message: str, event: str, success: bool, error: str, extra: dict):
+def push_usage_log(
+    message: str,
+    event: str,
+    success: bool,
+    error: str,
+    extra: dict,
+):
     """
     data:
         - message: message
