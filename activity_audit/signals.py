@@ -6,13 +6,19 @@ from typing import Any, List, Optional
 
 from django.apps import apps
 from django.db import models
-from django.db.models.signals import m2m_changed, post_delete
+from django.db.models.signals import (
+    m2m_changed,
+    post_delete,
+    pre_delete,
+    pre_save,
+)
 from django.dispatch import receiver
+from django.forms.models import model_to_dict
 
 from .middleware import get_user_details
 from .settings import UNREGISTERED_CLASSES
 
-logger = logging.getLogger("audit.crud")
+logger = logging.getLogger("audit.model")
 
 EVENT_TYPES = [
     "CREATE",
@@ -21,6 +27,9 @@ EVENT_TYPES = [
     "BULK_CREATE",
     "BULK_UPDATE",
     "M2M",
+    "PRE_CREATE",
+    "PRE_UPDATE",
+    "PRE_DELETE",
 ]
 
 
@@ -84,6 +93,7 @@ def push_log(
     model: str,
     event_type: str,
     instance_id: str,
+    instance_repr: str,
     extra: dict = {},
 ) -> None:
     user_id, user_info = get_user_details()
@@ -93,8 +103,10 @@ def push_log(
         "event_type": event_type,
         "user_id": user_id,
         "user_info": user_info,
+        "instance_repr": instance_repr,
         "extra": extra,
     }
+
     logger.audit(message, extra=payload)
 
 
@@ -110,6 +122,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
         original_bulk_create = models.QuerySet.bulk_create
         original_bulk_update = models.QuerySet.bulk_update
 
+        # SAVE ---------------------------------------------------------------------------
         @wraps(original_save)
         def save_with_signals(self: models.Model, *args: Any, **kwargs: Any) -> None:
             is_new = self._state.adding
@@ -120,14 +133,42 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             # Log the event
             event_type = EVENT_TYPES[0] if is_new else EVENT_TYPES[1]
 
+            instance_repr = model_to_dict(self)
+
             push_log(
                 f"{event_type} event for {model_class.__name__} (id: {self.pk})",
                 model_class.__name__,
                 event_type,
                 str(self.pk),
-                {},
+                instance_repr,
             )
 
+        # PRE_SAVE ----------------------------------------------------------------------
+        @receiver(pre_save, sender=model_class)
+        def handle_pre_save(
+            sender: type[models.Model], instance: models.Model, **kwargs: Any
+        ) -> None:
+            if not should_audit(instance):
+                return
+
+            is_new = instance._state.adding
+            event_type = (
+                EVENT_TYPES[6] if is_new else EVENT_TYPES[7]
+            )  # PRE_CREATE or PRE_UPDATE
+
+            # For new instances, we might not have a pk yet, so use a placeholder
+            instance_id = str(instance.pk) if instance.pk else "pending"
+            instance_repr = model_to_dict(instance)
+
+            push_log(
+                f"{event_type} event for {model_class.__name__} (id: {instance_id})",
+                model_class.__name__,
+                event_type,
+                instance_id,
+                instance_repr,
+            )
+
+        # BULK --------------------------------------------------------------------------
         @wraps(original_bulk_create)
         def bulk_create_with_signals(
             self, objs: List[models.Model], *args: Any, **kwargs: Any
@@ -146,11 +187,14 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             # Log only if this is the calling model
             if calling_model == model_class.__name__:
                 first_obj = created_objs[0]
+                instance_repr = model_to_dict(first_obj)
+
                 push_log(
                     f"{EVENT_TYPES[3]} event for {model_class.__name__} (id: {first_obj.pk})",
                     model_class.__name__,
                     EVENT_TYPES[3],
                     str(first_obj.pk),
+                    instance_repr,
                     {
                         "total_count": len(created_objs),
                     },
@@ -176,11 +220,14 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             # Log only if this is the calling model
             if calling_model == model_class.__name__:
                 first_obj = objs[0]
+                instance_repr = model_to_dict(first_obj)
+
                 push_log(
                     f"{EVENT_TYPES[4]} event for {model_class.__name__}",
                     model_class.__name__,
                     EVENT_TYPES[4],
                     str(first_obj.pk),
+                    instance_repr,
                     {
                         "total_count": len(objs),
                         "fields": fields,
@@ -192,19 +239,40 @@ def patch_model_event(model_class: type[models.Model]) -> None:
         models.QuerySet.bulk_create = bulk_create_with_signals
         models.QuerySet.bulk_update = bulk_update_with_signals
 
+        # DELETE -----------------------------------------------------------------------
+        @receiver(pre_delete, sender=model_class)
+        def handle_pre_delete(
+            sender: type[models.Model], instance: models.Model, **kwargs: Any
+        ) -> None:
+            if not should_audit(instance):
+                return
+
+            instance_repr = model_to_dict(instance)
+
+            push_log(
+                f"{EVENT_TYPES[8]} event for {model_class.__name__} (id: {instance.pk})",
+                model_class.__name__,
+                EVENT_TYPES[8],  # PRE_DELETE
+                str(instance.pk),
+                instance_repr,
+            )
+
         # Add delete signal handling
         @receiver(post_delete, sender=model_class)
         def handle_delete(
             sender: type[models.Model], instance: models.Model, **kwargs: Any
         ) -> None:
+            instance_repr = model_to_dict(instance)
+
             push_log(
                 f"{EVENT_TYPES[2]} event for {model_class.__name__} (id: {instance.pk})",
                 model_class.__name__,
                 EVENT_TYPES[2],
                 str(instance.pk),
+                instance_repr,
             )
 
-        # Add M2M signal handling
+        # M2M ------------------------------------------------------------------------
         for field in model_class._meta.many_to_many:
 
             @receiver(m2m_changed, sender=getattr(model_class, field.name).through)
@@ -219,11 +287,14 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                     return
 
                 field_name = kwargs.get("model", sender).__name__.lower()
+                instance_repr = model_to_dict(instance)
+
                 push_log(
                     f"M2M {action} event for {model_class.__name__} (id: {instance.pk})",
                     model_class.__name__,
                     EVENT_TYPES[5],
                     str(instance.pk),
+                    instance_repr,
                     {
                         "field_name": field_name,
                         "related_ids": list(map(str, pk_set)) if pk_set else None,

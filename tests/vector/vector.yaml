@@ -1,0 +1,144 @@
+sources:
+  app_logs:
+    type: file
+    include:
+      - "/app/audit/app.log"
+      - "/app/audit/app.log.*"
+    read_from: beginning
+    start_at_beginning: true
+    ignore_older_secs: 604800  # Ignore files older than 7 days
+    fingerprinting:
+      strategy: "device_and_inode"
+    max_line_bytes: 10485760  # 10MB max line size
+
+  api_logs:
+    type: file
+    include:
+      - "/app/audit/api.log"
+      - "/app/audit/api.log.*"
+    read_from: beginning
+    start_at_beginning: true
+    ignore_older_secs: 604800  # Ignore files older than 7 days
+    fingerprinting:
+      strategy: "device_and_inode"
+    max_line_bytes: 10485760  # 10MB max line size
+
+  audit_logs:
+    type: file
+    include:
+      - "/app/audit/audit.log"
+      - "/app/audit/audit.log.*"
+    read_from: beginning
+    start_at_beginning: true
+    ignore_older_secs: 604800  # Ignore files older than 7 days
+    fingerprinting:
+      strategy: "device_and_inode"
+    max_line_bytes: 10485760  # 10MB max line size
+
+transforms:
+  parse_api_logs:
+    type: remap
+    inputs:
+      - api_logs
+    source: |
+      # Parse the JSON from the log line
+      parsed, err = parse_json(.message)
+      if err == null {
+        .timestamp = parsed.timestamp
+        .level = parsed.level
+        .name = parsed.name
+        .message = parsed.message
+        .service_name = parsed.service_name
+        .request_type = parsed.request_type
+        .protocol = parsed.protocol
+        .user_id = parsed.user_id
+        .user_info = if is_object(parsed.user_info) || is_array(parsed.user_info) { encode_json(parsed.user_info) } else { parsed.user_info }
+        .request_repr = if is_object(parsed.request_repr) || is_array(parsed.request_repr) { encode_json(parsed.request_repr) } else { parsed.request_repr }
+        .response_repr = if is_object(parsed.response_repr) || is_array(parsed.response_repr) { encode_json(parsed.response_repr) } else { parsed.response_repr }
+        .error_message = parsed.error_message
+        .execution_time, _ = to_float(parsed.execution_time)
+        if !exists(.execution_time) || is_null(.execution_time) { .execution_time = 0.0 }
+        
+        # Remove the original raw message and other extra fields
+        del(.file)
+        del(.host)
+        del(.source_type)
+        del(.extra_fields)
+      }
+  parse_app_logs:
+    type: remap
+    inputs:
+      - app_logs
+    source: |
+      # Parse the JSON from the log line
+      parsed, err = parse_json(.message)
+      if err == null {
+        .timestamp = parsed.timestamp
+        .level = parsed.level
+        .name = parsed.name
+        .path = parsed.path
+        .module = parsed.module
+        .function = parsed.function
+        .message = parsed.message
+        .exception = parsed.exception
+        .extra = if is_object(parsed.extra) || is_array(parsed.extra) { encode_json(parsed.extra) } else { parsed.extra }
+        
+        # Remove the original raw message and other extra fields
+        del(.file)
+        del(.host)
+        del(.source_type)
+        del(.extra_fields)
+      }
+  parse_audit_logs:
+    type: remap
+    inputs:
+      - audit_logs   
+    source: |
+      # Parse the JSON from the log line
+      parsed, err = parse_json(.message)
+      if err == null {
+        .timestamp = parsed.timestamp
+        .level = parsed.level
+        .name = parsed.name
+        .message = parsed.message
+        .model = parsed.model
+        .event_type = parsed.event_type
+        .instance_id = parsed.instance_id
+        .instance_repr = if is_object(parsed.instance_repr) || is_array(parsed.instance_repr) { encode_json(parsed.instance_repr) } else { parsed.instance_repr }
+        .user_id = parsed.user_id
+        .user_info = if is_object(parsed.user_info) || is_array(parsed.user_info) { encode_json(parsed.user_info) } else { parsed.user_info }
+        .extra = if is_object(parsed.extra) || is_array(parsed.extra) { encode_json(parsed.extra) } else { parsed.extra }
+        
+        # Remove the original raw message and other extra fields
+        del(.file)
+        del(.host)
+        del(.source_type)
+        del(.extra_fields)
+      }
+sinks:
+  console_api_logs:
+    type: console
+    inputs:
+      - parse_api_logs
+    encoding:
+      codec: json
+    healthcheck:
+      enabled: true
+  
+  console_app_logs:
+    type: console
+    inputs:
+      - parse_app_logs
+    encoding:
+      codec: json
+    healthcheck:
+      enabled: true
+      
+  console_audit_logs:
+    type: console
+    inputs:
+      - parse_audit_logs
+    encoding:
+      codec: json
+    healthcheck:
+      enabled: true

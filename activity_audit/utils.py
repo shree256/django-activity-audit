@@ -1,5 +1,4 @@
 from .constants import CONSOLE_FORMAT
-from .logger_levels import API, AUDIT, LOGIN
 
 
 def get_console_formatter() -> dict:
@@ -10,25 +9,7 @@ def get_console_formatter() -> dict:
 
 def get_json_formatter() -> dict:
     return {
-        "()": "django_activity_audit.formatters.JsonFormatter",
-    }
-
-
-def get_api_formatter() -> dict:
-    return {
-        "()": "django_activity_audit.formatters.APIFormatter",
-    }
-
-
-def get_audit_formatter() -> dict:
-    return {
-        "()": "django_activity_audit.formatters.AuditFormatter",
-    }
-
-
-def get_login_formatter() -> dict:
-    return {
-        "()": "django_activity_audit.formatters.LoginFormatter",
+        "()": "activity_audit.formatters.JsonFormatter",
     }
 
 
@@ -51,47 +32,44 @@ def get_json_handler(
 
 def get_api_handler(
     filename: str = "audit_logs/api.log",
-    formatter: str = "api_json",
 ) -> dict:
     return {
-        "level": API,
-        "class": "django_activity_audit.handlers.AuditLogHandler",
+        "class": "activity_audit.handlers.APILogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
-        "formatter": formatter,
     }
 
 
 def get_audit_handler(
     filename: str = "audit_logs/audit.log",
-    formatter: str = "audit_json",
 ) -> dict:
     return {
-        "level": AUDIT,
-        "class": "django_activity_audit.handlers.AuditLogHandler",
+        "class": "activity_audit.handlers.AuditLogHandler",
         "filename": filename,
         "maxBytes": 1024 * 1024 * 10,  # 10MB
         "backupCount": 5,
-        "formatter": formatter,
     }
 
 
 def get_login_handler(
     filename: str = "audit_logs/login.log",
-    formatter: str = "login_json",
 ) -> dict:
     return {
-        "level": LOGIN,
-        "class": "django_activity_audit.handlers.AuditLogHandler",
+        "class": "activity_audit.handlers.LoginLogHandler",
         "filename": filename,
-        "maxBytes": 1024 * 1024 * 10,  # 10MB
+        "maxBytes": 1024 * 1024 * 5,  # 5MB
         "backupCount": 5,
-        "formatter": formatter,
     }
 
 
-def push_usage_log(message: str, event: str, success: bool, error: str, extra: dict):
+def push_usage_log(
+    message: str,
+    event: str,
+    success: bool,
+    error: str,
+    extra: dict,
+):
     """
     data:
         - message: message

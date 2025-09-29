@@ -23,25 +23,16 @@ class JsonFormatter(logging.Formatter):
             "function": record.funcName,
             "message": record.getMessage(),
             "exception": "",
-            "request": "",
-            "extra": "",
+            # "extra": {},
         }
 
         # Add exception info if present for ERROR
         if record.exc_info:
             log_data["exception"] = "{}".format(self.formatException(record.exc_info))
 
-        # Add request info if available
-        if hasattr(record, "request"):
-            log_data["request"] = {
-                "method": getattr(record.request, "method", None),
-                "path": getattr(record.request, "path", None),
-                "user": str(getattr(record.request, "user", None)),
-            }
-
         # Add extra fields if present
-        if hasattr(record, "extra"):
-            log_data.update(record.extra)
+        # if hasattr(record, "extra"):
+        #     log_data.update(record.extra)
 
         return json.dumps(log_data)
 
@@ -102,13 +93,21 @@ class AuditFormatter(logging.Formatter):
             "model",
             "event_type",
             "instance_id",
+            "instance_repr",
             "user_id",
             "user_info",
             "extra",
         ]
 
         for field in audit_fields:
-            log_data[field] = getattr(record, field)
+            value = getattr(record, field, "")
+            # Parse JSON strings back to objects for proper serialization
+            if field == "instance_repr" and isinstance(value, str):
+                try:
+                    value = json.loads(value)
+                except (json.JSONDecodeError, TypeError):
+                    pass  # Keep as string if parsing fails
+            log_data[field] = value
 
         return json.dumps(log_data)
 
