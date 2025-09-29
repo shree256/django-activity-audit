@@ -14,6 +14,7 @@ from django.db.models.signals import (
 )
 from django.dispatch import receiver
 from django.core import serializers
+from django.forms.models import model_to_dict
 
 from .middleware import get_user_details
 from .settings import UNREGISTERED_CLASSES
@@ -133,7 +134,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             # Log the event
             event_type = EVENT_TYPES[0] if is_new else EVENT_TYPES[1]
 
-            instance_repr = serializers.serialize("json", [self])
+            instance_repr = model_to_dict(self)
 
             push_log(
                 f"{event_type} event for {model_class.__name__} (id: {self.pk})",
@@ -158,7 +159,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
 
             # For new instances, we might not have a pk yet, so use a placeholder
             instance_id = str(instance.pk) if instance.pk else "pending"
-            instance_repr = serializers.serialize("json", [instance])
+            instance_repr = model_to_dict(instance)
 
             push_log(
                 f"{event_type} event for {model_class.__name__} (id: {instance_id})",
@@ -187,7 +188,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             # Log only if this is the calling model
             if calling_model == model_class.__name__:
                 first_obj = created_objs[0]
-                instance_repr = serializers.serialize("json", [first_obj])
+                instance_repr = model_to_dict(first_obj)
 
                 push_log(
                     f"{EVENT_TYPES[3]} event for {model_class.__name__} (id: {first_obj.pk})",
@@ -220,7 +221,8 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             # Log only if this is the calling model
             if calling_model == model_class.__name__:
                 first_obj = objs[0]
-                instance_repr = serializers.serialize("json", [first_obj])
+                instance_repr = model_to_dict(first_obj)
+
                 push_log(
                     f"{EVENT_TYPES[4]} event for {model_class.__name__}",
                     model_class.__name__,
@@ -246,7 +248,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             if not should_audit(instance):
                 return
 
-            instance_repr = serializers.serialize("json", [instance])
+            instance_repr = model_to_dict(instance)
 
             push_log(
                 f"{EVENT_TYPES[8]} event for {model_class.__name__} (id: {instance.pk})",
@@ -261,7 +263,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
         def handle_delete(
             sender: type[models.Model], instance: models.Model, **kwargs: Any
         ) -> None:
-            instance_repr = serializers.serialize("json", [instance])
+            instance_repr = model_to_dict(instance)
 
             push_log(
                 f"{EVENT_TYPES[2]} event for {model_class.__name__} (id: {instance.pk})",
@@ -286,7 +288,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                     return
 
                 field_name = kwargs.get("model", sender).__name__.lower()
-                instance_repr = serializers.serialize("json", [instance])
+                instance_repr = model_to_dict(instance)
 
                 push_log(
                     f"M2M {action} event for {model_class.__name__} (id: {instance.pk})",
