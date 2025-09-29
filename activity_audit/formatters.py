@@ -1,6 +1,32 @@
 import datetime
+import decimal
 import json
 import logging
+import uuid
+
+
+def _json_default(obj):
+    """
+    Serializer for non-JSON-native types.
+    - datetime/date/time -> ISO 8601 string
+    - Decimal -> float
+    - UUID -> string
+    - set -> list
+    - bytes -> UTF-8 string (replace invalid)
+    - Fallback -> str(obj)
+    """
+    if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
+        return obj.isoformat()
+    if isinstance(obj, decimal.Decimal):
+        return float(obj)
+    if isinstance(obj, uuid.UUID):
+        return str(obj)
+    if isinstance(obj, set):
+        return list(obj)
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+    # stringify the object
+    return str(obj)
 
 
 class JsonFormatter(logging.Formatter):
@@ -34,7 +60,7 @@ class JsonFormatter(logging.Formatter):
         # if hasattr(record, "extra"):
         #     log_data.update(record.extra)
 
-        return json.dumps(log_data)
+        return json.dumps(log_data, default=_json_default)
 
 
 class APIFormatter(logging.Formatter):
@@ -69,9 +95,8 @@ class APIFormatter(logging.Formatter):
         ]
 
         for field in audit_fields:
-            log_data[field] = getattr(record, field)
-
-        return json.dumps(log_data)
+            log_data[field] = getattr(record, field, "")
+        return json.dumps(log_data, default=_json_default)
 
 
 class AuditFormatter(logging.Formatter):
@@ -109,7 +134,7 @@ class AuditFormatter(logging.Formatter):
                     pass  # Keep as string if parsing fails
             log_data[field] = value
 
-        return json.dumps(log_data)
+        return json.dumps(log_data, default=_json_default)
 
 
 class LoginFormatter(logging.Formatter):
@@ -137,6 +162,6 @@ class LoginFormatter(logging.Formatter):
         ]
 
         for field in audit_fields:
-            log_data[field] = getattr(record, field)
+            log_data[field] = getattr(record, field, "")
 
-        return json.dumps(log_data)
+        return json.dumps(log_data, default=_json_default)

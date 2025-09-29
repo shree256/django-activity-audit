@@ -54,12 +54,18 @@ Installation
             },
             "file": get_json_handler(level="DEBUG", formatter="json"),
             "api_file": get_api_file_handler(),
+            "audit_file": get_audit_handler(),
         },
         "root": {"level": "DEBUG", "handlers": ["console", "file"]},
         "loggers": {
             "audit.request": {
                 "handlers": ["api_file"],
                 "level": "API",
+                "propagate": False,
+            },
+            "audit.model": {
+                "handlers": ["audit_file"],
+                "level": "AUDIT",
                 "propagate": False,
             },
             "django": {

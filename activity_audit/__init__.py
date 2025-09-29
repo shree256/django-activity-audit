@@ -9,6 +9,8 @@ from activity_audit.utils import (
     get_login_handler,
 )
 
+from . import logger_levels
+
 __all__ = [
     "get_console_formatter",
     "get_json_formatter",

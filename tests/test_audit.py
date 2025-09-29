@@ -1,7 +1,9 @@
 import json
+
 from pathlib import Path
 
 import pytest
+
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -51,9 +53,9 @@ class TestModelOperations:
                         ) in ["Author", "Book"]:
                             creation_logs_found += 1
 
-        assert creation_logs_found >= 2, (
-            f"Expected at least 2 creation logs, found {creation_logs_found}"
-        )
+        assert (
+            creation_logs_found >= 2
+        ), f"Expected at least 2 creation logs, found {creation_logs_found}"
 
     def test_model_update_logging(self):
         """Test that model updates are properly logged"""
@@ -94,9 +96,9 @@ class TestModelOperations:
                         ) in ["Author", "Book"]:
                             update_logs_found += 1
 
-        assert update_logs_found >= 2, (
-            f"Expected at least 2 update logs, found {update_logs_found}"
-        )
+        assert (
+            update_logs_found >= 2
+        ), f"Expected at least 2 update logs, found {update_logs_found}"
 
 
 @pytest.mark.django_db
@@ -156,9 +158,9 @@ class TestAPIRequests:
                         ).get("method") in ["GET", "POST", "PUT"]:
                             api_logs_found += 1
 
-        assert api_logs_found >= 3, (
-            f"Expected at least 3 API request logs, found {api_logs_found}"
-        )
+        assert (
+            api_logs_found >= 3
+        ), f"Expected at least 3 API request logs, found {api_logs_found}"
 
     def test_audit_folder_structure(self):
         """Test that logs are generated in the audit folder"""
@@ -251,9 +253,9 @@ class TestLogFileContents:
                 assert "model" in entry, "Model log should have model field"
                 assert "event_type" in entry, "Model log should have event_type field"
                 assert "instance_id" in entry, "Model log should have instance_id field"
-                assert "instance_repr" in entry, (
-                    "Model log should have instance_repr field"
-                )
+                assert (
+                    "instance_repr" in entry
+                ), "Model log should have instance_repr field"
                 assert "user_id" in entry, "Model log should have user_id field"
                 assert "user_info" in entry, "Model log should have user_info field"
                 assert "extra" in entry, "Model log should have extra field"
@@ -267,9 +269,9 @@ class TestLogFileContents:
         expected_events = ["PRE_CREATE", "CREATE", "UPDATE"]
 
         for expected_event in expected_events:
-            assert expected_event in event_types, (
-                f"Should have {expected_event} event in logs"
-            )
+            assert (
+                expected_event in event_types
+            ), f"Should have {expected_event} event in logs"
 
         # Verify model names
         models = [
@@ -296,16 +298,16 @@ class TestLogFileContents:
                 test_author_log = log
                 break
 
-        assert test_author_log is not None, (
-            "Should find our specific test author in logs"
-        )
+        assert (
+            test_author_log is not None
+        ), "Should find our specific test author in logs"
         instance_repr = test_author_log.get("instance_repr", {})
-        assert instance_repr.get("name") == "Log Content Test Author", (
-            "Instance repr should contain correct author name"
-        )
-        assert instance_repr.get("experience") == "Testing log file contents", (
-            "Instance repr should contain correct experience"
-        )
+        assert (
+            instance_repr.get("name") == "Log Content Test Author"
+        ), "Instance repr should contain correct author name"
+        assert (
+            instance_repr.get("experience") == "Testing log file contents"
+        ), "Instance repr should contain correct experience"
 
     def test_api_log_file_contents(self):
         """Test that API log files contain properly structured JSON with expected fields"""
@@ -359,15 +361,15 @@ class TestLogFileContents:
                 assert "user_id" in entry, "API log should have user_id field"
                 assert "user_info" in entry, "API log should have user_info field"
                 assert "request_repr" in entry, "API log should have request_repr field"
-                assert "response_repr" in entry, (
-                    "API log should have response_repr field"
-                )
-                assert "error_message" in entry, (
-                    "API log should have error_message field"
-                )
-                assert "execution_time" in entry, (
-                    "API log should have execution_time field"
-                )
+                assert (
+                    "response_repr" in entry
+                ), "API log should have response_repr field"
+                assert (
+                    "error_message" in entry
+                ), "API log should have error_message field"
+                assert (
+                    "execution_time" in entry
+                ), "API log should have execution_time field"
 
         # Verify we have the expected HTTP methods
         api_logs = [
@@ -398,9 +400,9 @@ class TestLogFileContents:
         assert "headers" in response_repr, "Response repr should have headers"
 
         # Verify execution_time is a number
-        assert isinstance(get_log.get("execution_time"), (int, float)), (
-            "Execution time should be a number"
-        )
-        assert get_log.get("execution_time") >= 0, (
-            "Execution time should be non-negative"
-        )
+        assert isinstance(
+            get_log.get("execution_time"), (int, float)
+        ), "Execution time should be a number"
+        assert (
+            get_log.get("execution_time") >= 0
+        ), "Execution time should be non-negative"
