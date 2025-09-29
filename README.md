@@ -131,8 +131,8 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
         "created_at": "2025-08-29T08:18:54Z",
         "updated_at": "2025-08-29T08:18:54Z"
     },
-    "user": {
-        "id": "cae8ffb4-ba52-409c-9a6f-e10362bfaf97",
+    "user_id": "cae8ffb4-ba52-409c-9a6f-e10362bfaf97",
+    "user_info": {
         "title": "mr",
         "email": "example@source.com",
         "first_name": "mohamlal",

@@ -135,14 +135,15 @@ CRUD Log
             "created_at": "2025-08-29T08:18:54Z",
             "updated_at": "2025-08-29T08:18:54Z"
         },
-        "user": {
-            "id": "cae8ffb4-ba52-409c-9a6f-e10362bfaf97",
+        "user_id": "14ab1197-ebdd-4300-a618-5910e0219936",
+        "user_info": {
             "title": "mr",
-            "email": "example@source.com",
-            "first_name": "mohamlal",
-            "middle_name": "v",
+            "email": "example@email.com",
+            "first_name": "mohanlal",
+            "middle_name": "",
             "last_name": "nair",
-            "sex": "m",
+            "sex": "male",
+            "date_of_birth": "21/30/1939"
         },
         "extra": {}
     }
