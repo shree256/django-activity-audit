@@ -5,7 +5,7 @@ from functools import wraps
 from typing import Any, List, Optional
 
 from django.apps import apps
-from django.db import models
+from django.db import models, transaction
 from django.db.models.signals import (
     m2m_changed,
     post_delete,
@@ -15,8 +15,8 @@ from django.db.models.signals import (
 from django.dispatch import receiver
 from django.forms.models import model_to_dict
 
-from .middleware import get_user_details
-from .settings import UNREGISTERED_CLASSES
+from activity_audit.middleware import get_user_details
+from activity_audit.settings import UNREGISTERED_CLASSES
 
 logger = logging.getLogger("audit.model")
 
@@ -96,18 +96,27 @@ def push_log(
     instance_repr: str,
     extra: dict = {},
 ) -> None:
-    user_id, user_info = get_user_details()
-    payload: dict = {
-        "model": model,
-        "instance_id": str(instance_id),
-        "event_type": event_type,
-        "user_id": user_id,
-        "user_info": user_info,
-        "instance_repr": instance_repr,
-        "extra": extra,
-    }
+    try:
+        user_id, user_info = get_user_details()
+        payload: dict = {
+            "model": model,
+            "instance_id": str(instance_id),
+            "event_type": event_type,
+            "user_id": user_id,
+            "user_info": user_info,
+            "instance_repr": instance_repr,
+            "extra": extra,
+        }
 
-    logger.audit(message, extra=payload)
+        def safe_audit_log():
+            try:
+                logger.audit(message, extra=payload)
+            except Exception as e:
+                logger.error(f"Failed to write audit log: {e}")
+
+        transaction.on_commit(safe_audit_log)
+    except Exception as e:
+        logger.error(f"Failed to prepare audit log: {e}")
 
 
 def patch_model_event(model_class: type[models.Model]) -> None:
