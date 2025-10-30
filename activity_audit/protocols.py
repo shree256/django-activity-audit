@@ -9,6 +9,7 @@ from requests.sessions import Session
 
 from .constants import REQUEST_TYPES
 from .middleware import get_user_details
+from .settings import SHOULD_LOG_EXTERNAL_REQUESTS
 
 logger = logging.getLogger("audit.request")
 
@@ -66,6 +67,12 @@ class HTTPClient(Session):
             "execution_time": 0,
         }
 
+    def __create_log(self):
+        if SHOULD_LOG_EXTERNAL_REQUESTS:
+            logger.api("Audit External Service", extra=self.log_payload)
+        else:
+            logger.info("Audit External Service", extra=self.log_payload)
+
     def request(self, method, url, **kwargs):
         start_time = time.time()
         headers = kwargs.get("headers", {})
@@ -103,7 +110,7 @@ class HTTPClient(Session):
         else:
             self.log_payload["response_repr"] = str(response_repr)
 
-        logger.api("Audit External Service", extra=self.log_payload)
+        self.__create_log()
 
         return response
 
@@ -143,8 +150,10 @@ class SFTPClient:
         }
 
     def __create_log(self):
-        # Add external service log
-        pass
+        if SHOULD_LOG_EXTERNAL_REQUESTS:
+            logger.api("Audit External Service", extra=self.log_payload)
+        else:
+            logger.info("Audit External Service", extra=self.log_payload)
 
     def connect(
         self,
@@ -206,12 +215,12 @@ class SFTPClient:
                     result = f"{filename} uploaded successfully to {path_to_folder}"
                     logger.info(f"{result}")
                 except Exception as e:
-                    self.log_payload[
-                        "error_message"
-                    ] = f"File upload failed. Error: {str(e)}"
-            self.log_payload[
-                "error_message"
-            ] = f"Path validation failed. Error: {str(error)}"
+                    self.log_payload["error_message"] = (
+                        f"File upload failed. Error: {str(e)}"
+                    )
+            self.log_payload["error_message"] = (
+                f"Path validation failed. Error: {str(error)}"
+            )
         else:
             self.log_payload["error_message"] = "Connection not established"
 

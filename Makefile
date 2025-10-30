@@ -43,3 +43,12 @@ clean: clean-logs clean-db
 	rm -rf htmlcov/
 	rm -rf dist/
 	rm -rf build/
+
+# Tag and push new version
+tag:
+	@read -p "Enter version (e.g. v1.0.0): " ver; \
+	git tag $$ver; \
+	git push origin $$ver; \
+	echo "Tagged and pushed $$ver to GitHub."
+
+release: build publish tag
