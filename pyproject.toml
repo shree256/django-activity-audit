@@ -1,6 +1,6 @@
 [project]
 name = "django-activity-audit"
-version = "1.2.6"
+version = "1.2.6.dev1"
 description = "A Django package for easy CRUD operation logging and container logs"
 authors = [
     { name = "Shreeshan", email = "shreeshan256@gmail.com" }

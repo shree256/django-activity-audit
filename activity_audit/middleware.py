@@ -5,7 +5,7 @@ import re
 import time
 
 from asgiref.local import Local
-from asgiref.sync import iscoroutinefunction, markcoroutinefunction
+from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_async
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
@@ -221,7 +221,9 @@ class AuditLoggingMiddleware(MiddlewareMixin):
         end_time = time.time()
 
         # Capture user details AFTER authentication has happened
-        user_id, user_info = get_user_details()
+        user_id, user_info = await sync_to_async(
+            get_user_details, thread_sensitive=True
+        )()
         self.log_data["user_id"] = user_id
         self.log_data["user_info"] = user_info
 
