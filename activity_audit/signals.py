@@ -145,7 +145,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             instance_repr = model_to_dict(self)
 
             push_log(
-                f"{event_type} event for {model_class.__name__} (id: {self.pk})",
+                f"{event_type} event by {model_class.__name__} (id: {self.pk})",
                 model_class.__name__,
                 event_type,
                 str(self.pk),
@@ -170,7 +170,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             instance_repr = model_to_dict(instance)
 
             push_log(
-                f"{event_type} event for {model_class.__name__} (id: {instance_id})",
+                f"{event_type} event by {model_class.__name__} (id: {instance_id})",
                 model_class.__name__,
                 event_type,
                 instance_id,
@@ -199,7 +199,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                 instance_repr = model_to_dict(first_obj)
 
                 push_log(
-                    f"{EVENT_TYPES[3]} event for {model_class.__name__} (id: {first_obj.pk})",
+                    f"{EVENT_TYPES[3]} event by {model_class.__name__} (id: {first_obj.pk})",
                     model_class.__name__,
                     EVENT_TYPES[3],
                     str(first_obj.pk),
@@ -232,7 +232,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                 instance_repr = model_to_dict(first_obj)
 
                 push_log(
-                    f"{EVENT_TYPES[4]} event for {model_class.__name__}",
+                    f"{EVENT_TYPES[4]} event by {model_class.__name__}",
                     model_class.__name__,
                     EVENT_TYPES[4],
                     str(first_obj.pk),
@@ -259,7 +259,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             instance_repr = model_to_dict(instance)
 
             push_log(
-                f"{EVENT_TYPES[8]} event for {model_class.__name__} (id: {instance.pk})",
+                f"{EVENT_TYPES[8]} event by {model_class.__name__} (id: {instance.pk})",
                 model_class.__name__,
                 EVENT_TYPES[8],  # PRE_DELETE
                 str(instance.pk),
@@ -274,7 +274,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             instance_repr = model_to_dict(instance)
 
             push_log(
-                f"{EVENT_TYPES[2]} event for {model_class.__name__} (id: {instance.pk})",
+                f"{EVENT_TYPES[2]} event by {model_class.__name__} (id: {instance.pk})",
                 model_class.__name__,
                 EVENT_TYPES[2],
                 str(instance.pk),
@@ -299,7 +299,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                 instance_repr = model_to_dict(instance)
 
                 push_log(
-                    f"M2M {action} event for {model_class.__name__} (id: {instance.pk})",
+                    f"M2M {action} event by {model_class.__name__} (id: {instance.pk})",
                     model_class.__name__,
                     EVENT_TYPES[5],
                     str(instance.pk),

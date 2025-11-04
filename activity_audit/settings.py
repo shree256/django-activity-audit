@@ -1,3 +1,5 @@
+import logging
+
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import Permission
@@ -5,6 +7,30 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.sessions.models import Session
 from django.db.migrations import Migration
 from django.db.migrations.recorder import MigrationRecorder
+
+
+# Handles AUDIT/API level as INFO for Sentry
+# Add a filter that maps AUDIT -> INFO
+class AuditToSentryFilter(logging.Filter):
+    def filter(self, record):
+        if record.levelname in ["AUDIT", "API"]:
+            # Map level so Sentry accepts it
+            record.levelno = logging.INFO
+            record.levelname = "INFO"
+            # Add tag so you can filter in Sentry UI
+            if not hasattr(record, "extra"):
+                record.extra = {}
+            if "tags" not in record.extra:
+                record.extra["tags"] = {}
+            record.extra["tags"]["log_type"] = "audit"
+        return True
+
+
+# Attach filter to Sentry logging handler
+root_logger = logging.getLogger()
+for handler in root_logger.handlers:
+    if handler.__class__.__name__.startswith("Sentry"):
+        handler.addFilter(AuditToSentryFilter())
 
 UNREGISTERED_CLASSES = [
     Migration,
