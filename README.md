@@ -121,7 +121,7 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
     "timestamp": "2025-08-16 17:06:32.403",
     "level": "AUDIT",
     "name": "audit.model",
-    "message": "CREATE event for User (id: 6f77b814-f9c1-4cab-a737-6677734bc303)",
+    "message": "CREATE event by User (id: 6f77b814-f9c1-4cab-a737-6677734bc303)",
     "model": "User",
     "event_type": "CREATE",
     "instance_id": "6f77b814-f9c1-4cab-a737-6677734bc303",
