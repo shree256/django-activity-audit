@@ -1,9 +1,9 @@
 build:
 	rm -rf dist/ build/
-	hatch build
+	./hatch build
 
 publish:
-	hatch publish
+	./hatch publish
 
 install:
 	pip install .[dev]
