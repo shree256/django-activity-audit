@@ -33,12 +33,24 @@ EVENT_TYPES = [
 ]
 
 
-def should_audit(instance):
-    """Return True or False to indicate whether the instance should be audited."""
+def should_audit(instance_or_class):
+    """Return True or False to indicate whether the instance or class should be audited."""
     # do not audit any model listed in UNREGISTERED_CLASSES
     for unregistered_class in UNREGISTERED_CLASSES:
-        if isinstance(instance, unregistered_class):
+        # Skip None values (e.g., when silk is not installed)
+        if unregistered_class is None:
+            continue
+        # Handle instances: isinstance works for instances
+        if isinstance(instance_or_class, unregistered_class):
             return False
+        # Handle classes: check if it's the same class or a subclass
+        if inspect.isclass(instance_or_class):
+            try:
+                if issubclass(instance_or_class, unregistered_class):
+                    return False
+            except TypeError:
+                # issubclass can raise TypeError if arguments are not classes
+                pass
     return True
 
 
