@@ -8,6 +8,22 @@ from django.contrib.sessions.models import Session
 from django.db.migrations import Migration
 from django.db.migrations.recorder import MigrationRecorder
 
+# Import silk models only if silk is installed
+try:
+    from silk.models import (
+        Request,
+        Response,
+        SQLQueryManager,
+        SQLQuery,
+        BaseProfile,
+        Profile,
+    )
+
+    SILK_INSTALLED = True
+except ImportError:
+    SILK_INSTALLED = False
+    Request = Response = SQLQueryManager = SQLQuery = BaseProfile = Profile = None
+
 
 # Handles AUDIT/API level as INFO for Sentry
 # Add a filter that maps AUDIT -> INFO
@@ -40,11 +56,24 @@ UNREGISTERED_CLASSES = [
     MigrationRecorder.Migration,
 ]
 
+# Add silk models only if silk is installed
+if SILK_INSTALLED:
+    UNREGISTERED_CLASSES.extend(
+        [
+            Request,
+            Response,
+            SQLQueryManager,
+            SQLQuery,
+            BaseProfile,
+            Profile,
+        ]
+    )
+
 # Import and unregister LogEntry class only if Django Admin app is installed
 if apps.is_installed("django.contrib.admin"):
     from django.contrib.admin.models import LogEntry
 
-    UNREGISTERED_CLASSES += [LogEntry]
+    UNREGISTERED_CLASSES.extend([LogEntry])
 
 # URL patterns to exclude from logging
 UNREGISTERED_URLS = [r"^/admin/", r"^/static/", r"^/favicon.ico$"]
@@ -55,7 +84,3 @@ UNREGISTERED_URLS.extend(getattr(settings, "AUDIT_UNREGISTERED_URLS_EXTRA", []))
 
 # URL patterns to include in logging (if empty, all URLs are logged)
 REGISTERED_URLS = getattr(settings, "AUDIT_REGISTERED_URLS", [])
-
-SHOULD_LOG_EXTERNAL_REQUESTS = getattr(
-    settings, "AUDIT_SHOULD_LOG_EXTERNAL_REQUESTS", True
-)
