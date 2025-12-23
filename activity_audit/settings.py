@@ -8,22 +8,6 @@ from django.contrib.sessions.models import Session
 from django.db.migrations import Migration
 from django.db.migrations.recorder import MigrationRecorder
 
-# Import silk models only if silk is installed
-try:
-    from silk.models import (
-        Request,
-        Response,
-        SQLQueryManager,
-        SQLQuery,
-        BaseProfile,
-        Profile,
-    )
-
-    SILK_INSTALLED = True
-except ImportError:
-    SILK_INSTALLED = False
-    Request = Response = SQLQueryManager = SQLQuery = BaseProfile = Profile = None
-
 
 # Handles AUDIT/API level as INFO for Sentry
 # Add a filter that maps AUDIT -> INFO
@@ -56,8 +40,18 @@ UNREGISTERED_CLASSES = [
     MigrationRecorder.Migration,
 ]
 
-# Add silk models only if silk is installed
+# Remove silk models audit logging
+SILK_INSTALLED = apps.is_installed("silk")
 if SILK_INSTALLED:
+    from silk.models import (
+        Request,
+        Response,
+        SQLQueryManager,
+        SQLQuery,
+        BaseProfile,
+        Profile,
+    )
+
     UNREGISTERED_CLASSES.extend(
         [
             Request,
