@@ -4,12 +4,15 @@ import time
 from typing import Optional, Tuple
 
 import paramiko
+from django.conf import settings
 
 from requests.sessions import Session
 
 from .constants import REQUEST_TYPES
 from .middleware import get_user_details
-from .settings import SHOULD_LOG_EXTERNAL_REQUESTS
+
+# Get SHOULD_LOG_EXTERNAL_REQUESTS from Django settings where this app is installed
+SHOULD_LOG_EXTERNAL_REQUESTS = getattr(settings, "SHOULD_LOG_EXTERNAL_REQUESTS", False)
 
 logger = logging.getLogger("audit.request")
 
