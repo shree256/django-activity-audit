@@ -10,7 +10,7 @@ from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
 from .constants import REQUEST_TYPES
-from .settings import REGISTERED_URLS, UNREGISTERED_URLS
+from .settings import REGISTERED_URLS, SERVICE_NAME, UNREGISTERED_URLS
 
 logger = logging.getLogger("audit.request")
 
@@ -116,7 +116,7 @@ class AuditLoggingMiddleware(MiddlewareMixin):
     def __init__(self, get_response):
         self.get_response = get_response
         self.log_data = {
-            "service_name": "review_board",
+            "service_name": SERVICE_NAME,
             "request_type": REQUEST_TYPES[0],
             "protocol": None,
             "user_id": "",

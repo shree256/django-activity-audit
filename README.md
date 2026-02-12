@@ -77,7 +77,12 @@ LOGGING = {
 }
 ```
 
-5. For external services logging, extend ```HTTPClient or SFTPClient```
+5. Configure the service name in `settings.py` (optional, defaults to `"default"`):
+```python
+AUDIT_SERVICE_NAME = "my_service"
+```
+
+6. For external services logging, extend ```HTTPClient or SFTPClient```
 ```python
 class ExternalService(HTTPClient):
     def __init__(self):
@@ -88,7 +93,7 @@ class ExternalService(HTTPClient):
         response = self.get(url) # sample log structure below
 ```
 
-7. Create ```audit_logs``` folder in project directory
+8. Create ```audit_logs``` folder in project directory
 
 ## Log Types
 
@@ -152,7 +157,7 @@ INFO 2025-04-30 08:51:10,403 /app/patients/api/utils.py utils create_patient_wit
     "level": "API",
     "name": "audit.request",
     "message": "Audit Internal Request",
-    "service_name": "review_board",
+    "service_name": "my_service",
     "request_type": "internal",
     "protocol": "http",
     "user_id": "14ab1197-ebdd-4300-a618-5910e0219936",

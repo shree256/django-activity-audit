@@ -44,12 +44,12 @@ UNREGISTERED_CLASSES = [
 SILK_INSTALLED = apps.is_installed("silk")
 if SILK_INSTALLED:
     from silk.models import (
-        Request,
-        Response,
-        SQLQueryManager,
-        SQLQuery,
         BaseProfile,
         Profile,
+        Request,
+        Response,
+        SQLQuery,
+        SQLQueryManager,
     )
 
     UNREGISTERED_CLASSES.extend(
@@ -78,3 +78,6 @@ UNREGISTERED_URLS.extend(getattr(settings, "AUDIT_UNREGISTERED_URLS_EXTRA", []))
 
 # URL patterns to include in logging (if empty, all URLs are logged)
 REGISTERED_URLS = getattr(settings, "AUDIT_REGISTERED_URLS", [])
+
+# Service name for audit logs
+SERVICE_NAME = getattr(settings, "AUDIT_SERVICE_NAME", "default")
