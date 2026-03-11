@@ -79,25 +79,7 @@ def get_calling_model() -> Optional[str]:
     return None
 
 
-class ModelSignalMixin:
-    """Mixin to add signal handling capabilities to models."""
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._original_m2m = self._get_m2m_state()
-
-    def _get_m2m_state(self) -> dict:
-        try:
-            """Get the current state of M2M fields."""
-            return {
-                field.name: set(
-                    getattr(self, field.name).all().values_list("id", flat=True)
-                )
-                for field in self._meta.many_to_many
-            }
-        except Exception as e:
-            logger.error(f"Error getting M2M state: {e}")
-            return {}
+_patched_models: set = set()
 
 
 def push_log(
@@ -131,12 +113,15 @@ def push_log(
         logger.error(f"Failed to prepare audit log: {e}")
 
 
+def instance_to_dict(instance: models.Model) -> dict:
+    return model_to_dict(instance, fields=[f.name for f in instance._meta.fields])
+
+
 def patch_model_event(model_class: type[models.Model]) -> None:
     """Monkey patch a model to add signal handling capabilities."""
 
-    if not issubclass(model_class, ModelSignalMixin):
-        # Add the mixin to the model's base classes
-        model_class.__bases__ = (ModelSignalMixin,) + model_class.__bases__
+    if model_class not in _patched_models:
+        _patched_models.add(model_class)
 
         # Store the original methods
         original_save = model_class.save
@@ -154,7 +139,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             # Log the event
             event_type = EVENT_TYPES[0] if is_new else EVENT_TYPES[1]
 
-            instance_repr = model_to_dict(self)
+            instance_repr = instance_to_dict(self)
 
             push_log(
                 f"{event_type} event by {model_class.__name__} (id: {self.pk})",
@@ -179,7 +164,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
 
             # For new instances, we might not have a pk yet, so use a placeholder
             instance_id = str(instance.pk) if instance.pk else "pending"
-            instance_repr = model_to_dict(instance)
+            instance_repr = instance_to_dict(instance)
 
             push_log(
                 f"{event_type} event by {model_class.__name__} (id: {instance_id})",
@@ -208,7 +193,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             # Log only if this is the calling model
             if calling_model == model_class.__name__:
                 first_obj = created_objs[0]
-                instance_repr = model_to_dict(first_obj)
+                instance_repr = instance_to_dict(first_obj)
 
                 push_log(
                     f"{EVENT_TYPES[3]} event by {model_class.__name__} (id: {first_obj.pk})",
@@ -231,17 +216,17 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                 return original_bulk_update(self, objs, fields, batch_size)
 
             # Call the original bulk_update method
-            original_bulk_update(self, objs, fields, batch_size)
+            bulk_update = original_bulk_update(self, objs, fields, batch_size)
 
             # Get the calling model
             calling_model = get_calling_model()
             if not calling_model:
-                return original_bulk_update(self, objs, fields, batch_size)
+                return bulk_update
 
             # Log only if this is the calling model
             if calling_model == model_class.__name__:
                 first_obj = objs[0]
-                instance_repr = model_to_dict(first_obj)
+                instance_repr = instance_to_dict(first_obj)
 
                 push_log(
                     f"{EVENT_TYPES[4]} event by {model_class.__name__}",
@@ -268,7 +253,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
             if not should_audit(instance):
                 return
 
-            instance_repr = model_to_dict(instance)
+            instance_repr = instance_to_dict(instance)
 
             push_log(
                 f"{EVENT_TYPES[8]} event by {model_class.__name__} (id: {instance.pk})",
@@ -283,7 +268,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
         def handle_delete(
             sender: type[models.Model], instance: models.Model, **kwargs: Any
         ) -> None:
-            instance_repr = model_to_dict(instance)
+            instance_repr = instance_to_dict(instance)
 
             push_log(
                 f"{EVENT_TYPES[2]} event by {model_class.__name__} (id: {instance.pk})",
@@ -308,7 +293,7 @@ def patch_model_event(model_class: type[models.Model]) -> None:
                     return
 
                 field_name = kwargs.get("model", sender).__name__.lower()
-                instance_repr = model_to_dict(instance)
+                instance_repr = instance_to_dict(instance)
 
                 push_log(
                     f"M2M {action} event by {model_class.__name__} (id: {instance.pk})",
@@ -330,7 +315,7 @@ def setup_model_signals() -> None:
             if not should_audit(model):
                 continue
 
-            if not issubclass(model, ModelSignalMixin):
+            if model not in _patched_models:
                 patch_model_event(model)
 
 
