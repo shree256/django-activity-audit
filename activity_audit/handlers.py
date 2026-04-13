@@ -1,8 +1,9 @@
 import logging
+import queue
 
-from logging.handlers import RotatingFileHandler
+from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
 
-from .formatters import APIFormatter, AuditFormatter, LoginFormatter
+from .formatters import APIFormatter, AuditFormatter, JsonFormatter, LoginFormatter
 
 
 class BaseAuditHandler(RotatingFileHandler):
@@ -72,3 +73,94 @@ class LoginLogHandler(BaseAuditHandler):
     ):
         super().__init__(filename, mode, maxBytes, backupCount, encoding, delay)
         self.setFormatter(LoginFormatter())
+
+
+# ASYNC ------------------------------------------------------
+class AsyncBaseAuditHandler(QueueHandler):
+    """
+    Base async handler. Enqueues records on the calling thread; a background
+    QueueListener thread does the actual file write via the wrapped sync handler.
+
+    Subclasses pass the concrete sync handler class and formatter via
+    _sync_handler_class and _formatter_class.
+    """
+
+    _sync_handler_class = None
+    _formatter_class = None
+
+    def __init__(
+        self,
+        filename,
+        mode="a",
+        maxBytes=0,
+        backupCount=0,
+        encoding=None,
+        delay=False,
+    ):
+        log_queue = queue.Queue(-1)
+        super().__init__(log_queue)
+
+        sync_handler = self._sync_handler_class(
+            filename, mode, maxBytes, backupCount, encoding, delay
+        )
+        self._listener = QueueListener(
+            log_queue, sync_handler, respect_handler_level=True
+        )
+        self._listener.start()
+
+    def close(self):
+        self._listener.stop()
+        super().close()
+
+
+class AsyncAPILogHandler(AsyncBaseAuditHandler):
+    """Non-blocking handler for API audit logs."""
+
+    _sync_handler_class = APILogHandler
+    _formatter_class = APIFormatter
+
+
+class AsyncAuditLogHandler(AsyncBaseAuditHandler):
+    """Non-blocking handler for model audit logs."""
+
+    _sync_handler_class = AuditLogHandler
+    _formatter_class = AuditFormatter
+
+
+class AsyncLoginLogHandler(AsyncBaseAuditHandler):
+    """Non-blocking handler for login audit logs."""
+
+    _sync_handler_class = LoginLogHandler
+    _formatter_class = LoginFormatter
+
+
+class AsyncJsonHandler(QueueHandler):
+    """
+    Non-blocking handler for general JSON logs. Wraps a RotatingFileHandler
+    with JsonFormatter on the background thread.
+    """
+
+    def __init__(
+        self,
+        filename,
+        mode="a",
+        maxBytes=0,
+        backupCount=0,
+        encoding=None,
+        delay=False,
+    ):
+        log_queue = queue.Queue(-1)
+        super().__init__(log_queue)
+
+        sync_handler = RotatingFileHandler(
+            filename, mode, maxBytes, backupCount, encoding, delay
+        )
+        sync_handler.setFormatter(JsonFormatter())
+        self._listener = QueueListener(
+            log_queue, sync_handler, respect_handler_level=True
+        )
+        self._listener.start()
+
+    def close(self):
+        self._listener.stop()
+        super().close()
