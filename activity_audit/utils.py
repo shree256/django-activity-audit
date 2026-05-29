@@ -63,6 +63,58 @@ def get_login_handler(
     }
 
 
+# ASYNC ------------------------------------------------------
+def get_async_json_handler(
+    level: str = "DEBUG",
+    filename: str = "audit_logs/app.log",
+    max_bytes: int = 1024 * 1024 * 10,
+    backup_count: int = 5,
+) -> dict:
+    return {
+        "level": level,
+        "class": "activity_audit.handlers.AsyncJsonHandler",
+        "filename": filename,
+        "maxBytes": max_bytes,
+        "backupCount": backup_count,
+    }
+
+
+def get_async_api_handler(
+    filename: str = "audit_logs/api.log",
+) -> dict:
+    return {
+        "class": "activity_audit.handlers.AsyncAPILogHandler",
+        "filename": filename,
+        "maxBytes": 1024 * 1024 * 10,  # 10MB
+        "backupCount": 5,
+    }
+
+
+def get_async_audit_handler(
+    filename: str = "audit_logs/audit.log",
+) -> dict:
+    return {
+        "class": "activity_audit.handlers.AsyncAuditLogHandler",
+        "filename": filename,
+        "maxBytes": 1024 * 1024 * 10,  # 10MB
+        "backupCount": 5,
+    }
+
+
+def get_async_login_handler(
+    filename: str = "audit_logs/login.log",
+) -> dict:
+    return {
+        "class": "activity_audit.handlers.AsyncLoginLogHandler",
+        "filename": filename,
+        "maxBytes": 1024 * 1024 * 5,  # 5MB
+        "backupCount": 5,
+    }
+
+
+# ----------------------------------------------------------------
+
+
 def push_usage_log(
     message: str,
     event: str,
