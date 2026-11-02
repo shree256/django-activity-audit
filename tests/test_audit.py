@@ -5,8 +5,10 @@ Audit test suite covering:
   3. M2M field changes are logged
   4. Console (stream) output from each formatter includes all declared fields
   5. The same request_id is generated once and flows through app, api, and audit logs
+  6. The async middleware path (__acall__) resolves the lazy user safely
 """
 
+import asyncio
 import io
 import json
 import logging
@@ -14,9 +16,13 @@ import logging
 import pytest
 
 from django.contrib.auth import get_user_model
+from django.http import HttpResponse
+from django.test import RequestFactory
+from django.utils.functional import SimpleLazyObject
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from activity_audit.middleware import AuditLoggingMiddleware
 from tests.publications.models import Author, Book
 
 # ---------------------------------------------------------------------------
@@ -542,3 +548,51 @@ class TestRequestIdPropagation:
         assert (
             api_request_id == m2m_request_id
         ), f"request_id mismatch: api={api_request_id!r}, m2m={m2m_request_id!r}"
+
+
+# ---------------------------------------------------------------------------
+# 6. Async middleware path (__acall__)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db(transaction=True)
+class TestAsyncMiddlewarePath:
+    """AuditLoggingMiddleware.__acall__ must resolve the lazy `request.user`
+    without triggering Django's SynchronousOnlyOperation error.
+
+    Regression test: `get_user_details()` touches attributes on
+    `request.user`, a SimpleLazyObject wrapping a DB-backed lookup (exactly
+    what AuthenticationMiddleware assigns). Forcing that lookup directly
+    inside an async request cycle raises "You cannot call this from an
+    async context" unless it's dispatched via sync_to_async.
+    """
+
+    def test_async_call_resolves_lazy_db_backed_user_without_error(
+        self, request_log_capture
+    ):
+        user = get_user_model().objects.create_user(
+            username="async-alice",
+            email="async-alice@example.com",
+            first_name="Async",
+            last_name="Alice",
+            password="pw",
+        )
+
+        async def get_response(request):
+            return HttpResponse("ok")
+
+        middleware = AuditLoggingMiddleware(get_response)
+
+        request = RequestFactory().get("/api/authors/")
+        request.user = SimpleLazyObject(
+            lambda: get_user_model().objects.get(pk=user.pk)
+        )
+
+        response = asyncio.run(middleware.__acall__(request))
+
+        assert response.status_code == 200
+
+        records = request_log_capture.by_level("API")
+        assert records, "Expected an API log record from the async path"
+        assert records[0].user_id == str(user.id)
+        assert records[0].user_info.get("email") == "async-alice@example.com"
