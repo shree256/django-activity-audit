@@ -150,6 +150,54 @@ class ExternalService(HTTPClient):
 
 8. Create ```audit_logs``` folder in project directory
 
+## Settings
+
+All settings are optional.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `AUDIT_MASK_KEYS_EXTRA` | `[]` | More keys to mask, added to the default keys. |
+| `AUDIT_PROCESSORS` | `[]` | Dotted paths to your own structlog processors. They run on every log line, in order. |
+| `AUDIT_UNREGISTERED_URLS_DEFAULT` | `[r"^/admin/", r"^/static/", r"^/favicon.ico$"]` | URL patterns that are not logged. If you set it, it replaces the defaults. |
+| `AUDIT_UNREGISTERED_URLS_EXTRA` | `[]` | More URL patterns that are not logged, added to the list above. |
+| `AUDIT_REGISTERED_URLS` | `[]` | If you set it, only the URLs that match are logged. A URL that also matches an unregistered pattern is still not logged. |
+| `AUDIT_SERVICE_NAME` | `"default"` | The `service_name` value in the middleware's request logs. `HTTPClient` takes its name from its constructor. |
+
+The app checks `AUDIT_MASK_KEYS_EXTRA` and `AUDIT_PROCESSORS` at startup. A value that is not a list or tuple of strings, a path that does not import, or a path to something that is not callable stops the start with an error.
+
+### Masking
+
+The package masks sensitive values in every log line before it writes the line. This includes request logs, model change logs, login logs and app logs. When a key matches, its value becomes `"[MASKED]"`, at any depth.
+
+The default keys are `Authorization`, `Cookie`, `Set-Cookie`, `X-CSRFToken`, `secret_key`, `access_token`, `refresh_token` and `password`. The match ignores case, `-` and `_`. For example, `access_token`, `access-token` and `accessToken` all match. The whole key must match. A key that only contains a default name, such as `old_password`, is not masked.
+
+To mask more keys, add them:
+
+```python
+AUDIT_MASK_KEYS_EXTRA = ["token", "client_secret"]
+```
+
+A value nested more than 64 levels deep becomes `"[TRUNCATED]"`. Without this limit, the JSON renderer cannot write the line, and the line is lost.
+
+Masking reads key names only. It does not scan text. These values are not masked:
+
+- Outgoing request logs from `HTTPClient`. It writes `request_repr` and `response_repr` as strings, so the masking does not see the keys inside them.
+- Secrets inside a string, such as an HTML response body or an error message.
+- Request bodies that are not JSON. The middleware does not log those bodies.
+- Secrets in the URL path, such as `/reset/<token>/`.
+- Keys with other names, such as `client_secret`, `id_token` or `new_password`. Add them to `AUDIT_MASK_KEYS_EXTRA`.
+- Values inside dataclass objects. orjson writes them as objects, but the masking walks only mappings, lists and tuples.
+
+If a page returns secrets in its body, add its URL pattern to `AUDIT_UNREGISTERED_URLS_EXTRA`.
+
+### Your own processors
+
+```python
+AUDIT_PROCESSORS = ["myapp.logging.add_tenant_id"]
+```
+
+Each entry is the dotted path to a structlog processor: a function `(logger, method_name, event_dict)` that returns the event dict. The processors run in order, on every log line. They run after the package sets `log_type` and `extra`, and before masking, so a value that a processor adds is masked too. A processor sees values before they are masked. Put the values that a processor adds under `extra`. The JSON formatter from `get_stdlib_formatter()` drops top-level keys that are not standard fields. Do not send the event dict anywhere from a processor. Do not raise an exception from a processor. For a structlog logger, the exception goes up into the code that wrote the log line. For a standard `logging` logger, the handler prints the exception to stderr and the line is lost. `structlog.DropEvent` works the other way round: it drops the line for a structlog logger, and a standard `logging` logger raises it into the caller.
+
 ## Log Types
 
 ### Container Logs
