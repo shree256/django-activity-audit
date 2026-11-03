@@ -10,6 +10,7 @@ import structlog
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.crypto import salted_hmac
 from django.utils.module_loading import import_string
 from structlog.processors import CallsiteParameter
 
@@ -209,9 +210,11 @@ MASKED = "[MASKED]"
 TRUNCATED = "[TRUNCATED]"
 # orjson drops the whole line past 254 nested levels, so stop well before that.
 MAX_MASK_DEPTH = 64
+HASH_SALT = "activity_audit.hash"
 
-# HWC-958. Compared after _normalize_key, so case, "-" and "_" do not matter.
-DEFAULT_MASK_KEYS = (
+# HWC-958. AUDIT_SENSITIVE_KEYS_DEFAULT replaces these.
+# Compared after _normalize_key, so case, "-" and "_" do not matter.
+DEFAULT_SENSITIVE_KEYS = (
     "authorization",
     "cookie",
     "set-cookie",
@@ -227,14 +230,14 @@ def _normalize_key(key):
     return key.lower().replace("-", "").replace("_", "")
 
 
-def _setting(name):
+def _setting(name, default=()):
     # Apps build formatters while their settings module loads, so read per call.
-    return getattr(settings, name, ()) if settings.configured else ()
+    return getattr(settings, name, default) if settings.configured else default
 
 
 @lru_cache(maxsize=None)
-def _mask_keys(extra):
-    return frozenset(_normalize_key(key) for key in DEFAULT_MASK_KEYS + extra)
+def _sensitive_keys(default, extra):
+    return frozenset(_normalize_key(key) for key in default + extra)
 
 
 @lru_cache(maxsize=None)
@@ -249,7 +252,34 @@ def run_app_processors(logger, method, event_dict):
     return event_dict
 
 
-def _mask(value, keys, depth, path):
+def hash_value(key, value):
+    """The default AUDIT_SENSITIVE_VALUE_FUNCTION: a keyed hash of the value.
+
+    None and "" stay as they are, so a missing value does not look like a secret.
+    """
+    if value is None or value == "":
+        return value
+    # None makes salted_hmac use SECRET_KEY. An empty secret would hash with a public key.
+    secret = _setting("AUDIT_HASH_SECRET", None) or None
+    # A JSON body can carry a lone surrogate, which strict UTF-8 cannot encode.
+    data = str(value).encode("utf-8", "surrogatepass")
+    digest = salted_hmac(HASH_SALT, data, secret=secret, algorithm="sha256")
+    return "hmac-sha256:" + digest.hexdigest()[:16]
+
+
+def _masked(key, value):
+    return MASKED
+
+
+def _value_function():
+    if not settings.configured:
+        # No key to hash with, and no project function to load.
+        return _masked
+    path = _setting("AUDIT_SENSITIVE_VALUE_FUNCTION", None)
+    return _load_processors((path,))[0] if path else hash_value
+
+
+def _mask(value, keys, hide, depth, path):
     if depth > MAX_MASK_DEPTH:
         return TRUNCATED
     if not isinstance(value, (Mapping, list, tuple)):
@@ -264,25 +294,32 @@ def _mask(value, keys, depth, path):
             # dict.items() reads raw storage: MultiValueDict.items() keeps only the last value.
             items = dict.items(value) if isinstance(value, dict) else value.items()
             return {
-                key: MASKED
+                key: hide(key, item)
                 if isinstance(key, str) and _normalize_key(key) in keys
-                else _mask(item, keys, depth + 1, path)
+                else _mask(item, keys, hide, depth + 1, path)
                 for key, item in items
             }
-        return [_mask(item, keys, depth + 1, path) for item in value]
+        return [_mask(item, keys, hide, depth + 1, path) for item in value]
     finally:
         path.discard(id(value))
 
 
 def mask_sensitive_values(logger, method, event_dict):
-    """Return a copy with each sensitive key's value, at any depth, set to MASKED."""
-    keys = _mask_keys(tuple(_setting("AUDIT_MASK_KEYS_EXTRA")))
-    return _mask(event_dict, keys, 0, set())
+    """Return a copy with each sensitive key's value, at any depth, replaced."""
+    keys = _sensitive_keys(
+        tuple(_setting("AUDIT_SENSITIVE_KEYS_DEFAULT", DEFAULT_SENSITIVE_KEYS)),
+        tuple(_setting("AUDIT_SENSITIVE_KEYS_EXTRA")),
+    )
+    return _mask(event_dict, keys, _value_function(), 0, set())
 
 
 def check_settings():
     """Raise at startup, not on the first log line, when a setting is wrong."""
-    for name in ("AUDIT_MASK_KEYS_EXTRA", "AUDIT_PROCESSORS"):
+    for name in (
+        "AUDIT_SENSITIVE_KEYS_DEFAULT",
+        "AUDIT_SENSITIVE_KEYS_EXTRA",
+        "AUDIT_PROCESSORS",
+    ):
         value = _setting(name)
         if not isinstance(value, (list, tuple)) or not all(
             isinstance(item, str) for item in value
@@ -290,12 +327,25 @@ def check_settings():
             raise ImproperlyConfigured(
                 f"{name} must be a list or tuple of strings, got {value!r}."
             )
-    paths = tuple(_setting("AUDIT_PROCESSORS"))
-    for path, processor in zip(paths, _load_processors(paths)):
-        if isinstance(processor, type) or not callable(processor):
-            raise ImproperlyConfigured(
-                f"AUDIT_PROCESSORS entry {path!r} is not callable."
-            )
+    function = _setting("AUDIT_SENSITIVE_VALUE_FUNCTION", None)
+    if function is not None and (not isinstance(function, str) or not function):
+        raise ImproperlyConfigured(
+            f"AUDIT_SENSITIVE_VALUE_FUNCTION must be a dotted path, got {function!r}."
+        )
+    secret = _setting("AUDIT_HASH_SECRET", None)
+    if secret is not None and (not isinstance(secret, str) or not secret):
+        # Never show the value: it is the hash key.
+        raise ImproperlyConfigured("AUDIT_HASH_SECRET must be a non-empty string.")
+    if secret is None:
+        # A project function can still call hash_value, which then needs SECRET_KEY.
+        settings.SECRET_KEY  # Django raises ImproperlyConfigured when it is empty.
+    for name, paths in (
+        ("AUDIT_PROCESSORS", tuple(_setting("AUDIT_PROCESSORS"))),
+        ("AUDIT_SENSITIVE_VALUE_FUNCTION", (function,) if function else ()),
+    ):
+        for path, loaded in zip(paths, _load_processors(paths)):
+            if isinstance(loaded, type) or not callable(loaded):
+                raise ImproperlyConfigured(f"{name} entry {path!r} is not callable.")
 
 
 shared_processors = [

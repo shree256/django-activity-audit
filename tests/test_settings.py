@@ -11,6 +11,9 @@ DEBUG = True
 
 SECRET_KEY = "test-secret-key-for-testing-only"
 
+# Fixed so tests can assert literal hash values.
+AUDIT_HASH_SECRET = "test-hash-secret"
+
 # Use in-memory SQLite database for fast testing
 DATABASES = {
     "default": {
