@@ -156,39 +156,86 @@ All settings are optional.
 
 | Setting | Default | What it does |
 |---|---|---|
-| `AUDIT_MASK_KEYS_EXTRA` | `[]` | More keys to mask, added to the default keys. |
+| `AUDIT_SENSITIVE_KEYS_DEFAULT` | the 8 keys below | Keys whose values are hidden. If you set it, it replaces the defaults. An empty list, with an empty `AUDIT_SENSITIVE_KEYS_EXTRA`, turns hiding off. |
+| `AUDIT_SENSITIVE_KEYS_EXTRA` | `[]` | More keys to hide, added to the list above. |
+| `AUDIT_SENSITIVE_VALUE_FUNCTION` | the built-in hash | Dotted path to your own function that replaces a sensitive value. |
+| `AUDIT_HASH_SECRET` | `SECRET_KEY` | The key for the built-in hash. |
 | `AUDIT_PROCESSORS` | `[]` | Dotted paths to your own structlog processors. They run on every log line, in order. |
 | `AUDIT_UNREGISTERED_URLS_DEFAULT` | `[r"^/admin/", r"^/static/", r"^/favicon.ico$"]` | URL patterns that are not logged. If you set it, it replaces the defaults. |
 | `AUDIT_UNREGISTERED_URLS_EXTRA` | `[]` | More URL patterns that are not logged, added to the list above. |
 | `AUDIT_REGISTERED_URLS` | `[]` | If you set it, only the URLs that match are logged. A URL that also matches an unregistered pattern is still not logged. |
 | `AUDIT_SERVICE_NAME` | `"default"` | The `service_name` value in the middleware's request logs. `HTTPClient` takes its name from its constructor. |
 
-The app checks `AUDIT_MASK_KEYS_EXTRA` and `AUDIT_PROCESSORS` at startup. A value that is not a list or tuple of strings, a path that does not import, or a path to something that is not callable stops the start with an error.
+The app checks `AUDIT_SENSITIVE_KEYS_DEFAULT`, `AUDIT_SENSITIVE_KEYS_EXTRA`, `AUDIT_SENSITIVE_VALUE_FUNCTION`, `AUDIT_HASH_SECRET` and `AUDIT_PROCESSORS` at startup. Each of these stops the start with an error:
 
-### Masking
+- A key list or `AUDIT_PROCESSORS` value that is not a list or tuple of strings.
+- An `AUDIT_SENSITIVE_VALUE_FUNCTION` or `AUDIT_HASH_SECRET` that is not a non-empty string.
+- A path that does not import.
+- A path to a class, or to something else that is not callable.
+- An empty `SECRET_KEY` when `AUDIT_HASH_SECRET` is not set.
 
-The package masks sensitive values in every log line before it writes the line. This includes request logs, model change logs, login logs and app logs. When a key matches, its value becomes `"[MASKED]"`, at any depth.
+### Sensitive values
 
-The default keys are `Authorization`, `Cookie`, `Set-Cookie`, `X-CSRFToken`, `secret_key`, `access_token`, `refresh_token` and `password`. The match ignores case, `-` and `_`. For example, `access_token`, `access-token` and `accessToken` all match. The whole key must match. A key that only contains a default name, such as `old_password`, is not masked.
+The package hides sensitive values in every log line before it writes the line. This includes request logs, model change logs, login logs and app logs. When a key matches, at any depth, the package replaces its value with a keyed hash, such as `"hmac-sha256:ce79ca3145ff1c39"`.
 
-To mask more keys, add them:
+The default keys are `Authorization`, `Cookie`, `Set-Cookie`, `X-CSRFToken`, `secret_key`, `access_token`, `refresh_token` and `password`. The match ignores case, `-` and `_`. For example, `access_token`, `access-token` and `accessToken` all match. The whole key must match. A key that only contains a default name, such as `old_password`, is not hidden.
+
+To change the list of keys:
 
 ```python
-AUDIT_MASK_KEYS_EXTRA = ["token", "client_secret"]
+AUDIT_SENSITIVE_KEYS_DEFAULT = ["authorization", "cookie", "password"]  # replaces the 8 defaults
+AUDIT_SENSITIVE_KEYS_EXTRA = ["token", "client_secret"]  # added to the list
 ```
 
-A value nested more than 64 levels deep becomes `"[TRUNCATED]"`. Without this limit, the JSON renderer cannot write the line, and the line is lost.
+A value nested more than 64 levels deep becomes `"[TRUNCATED]"`. A cycle also ends in `"[TRUNCATED]"`. Without this limit, the JSON renderer cannot write the line, and the line is lost.
 
-Masking reads key names only. It does not scan text. These values are not masked:
+The package reads key names only. It does not scan text. These values are not hidden:
 
-- Outgoing request logs from `HTTPClient`. It writes `request_repr` and `response_repr` as strings, so the masking does not see the keys inside them.
+- Outgoing request logs from `HTTPClient`. It writes `request_repr` and `response_repr` as strings, so the package does not see the keys inside them.
 - Secrets inside a string, such as an HTML response body or an error message.
 - Request bodies that are not JSON. The middleware does not log those bodies.
 - Secrets in the URL path, such as `/reset/<token>/`.
-- Keys with other names, such as `client_secret`, `id_token` or `new_password`. Add them to `AUDIT_MASK_KEYS_EXTRA`.
-- Values inside dataclass objects. orjson writes them as objects, but the masking walks only mappings, lists and tuples.
+- Keys with other names, such as `client_secret`, `id_token` or `new_password`. Add them to `AUDIT_SENSITIVE_KEYS_EXTRA`.
+- Values inside dataclass objects. orjson writes them as objects, but the package walks only mappings, lists and tuples.
 
 If a page returns secrets in its body, add its URL pattern to `AUDIT_UNREGISTERED_URLS_EXTRA`.
+
+### The hash
+
+The built-in hash is HMAC-SHA256 from Django's `salted_hmac`, cut to 16 hex characters. The whole value is hashed as one string. A value that is not a string, such as a list or a number, is hashed as its Python text, `str(value)`. The same value gives the same hash, so you can follow one token across log lines. A person who reads the logs cannot reverse the hash or test guesses without the key.
+
+The key is `AUDIT_HASH_SECRET`, or `SECRET_KEY` if you do not set it. In production, set a separate `AUDIT_HASH_SECRET` and read it from the environment, like your other secrets:
+
+```python
+AUDIT_HASH_SECRET = env("AUDIT_HASH_SECRET")
+```
+
+- If you change the key, every hash changes.
+- Two services give the same hash for a value only if they use the same key.
+- A person who has the key can test guesses for short values, such as passwords, because HMAC is fast.
+- Two equal values give equal hashes. A log reader can see that two users sent the same password, without seeing the password.
+- `None` and `""` stay as they are, so a missing value does not look like a secret.
+- If Django settings are not configured, the package cannot read your settings and has no key. It then uses the 8 default keys and writes `"[MASKED]"`.
+
+### Your own value function
+
+To decide yourself what replaces a sensitive value, name a function:
+
+```python
+AUDIT_SENSITIVE_VALUE_FUNCTION = "myapp.logging.hide_value"
+```
+
+```python
+from activity_audit.shared_processors import hash_value
+
+
+def hide_value(key, value):
+    if key.lower() == "password":
+        return "[MASKED]"
+    return hash_value(key, value)
+```
+
+The package calls the function for each matched key, with the original key and the value. The function returns what the log line shows. Return a string, a number, a bool or `None`. The package does not walk the returned value. A dict or list that you return is written as it is, with no hiding inside it. Do not raise an exception from the function, for the same reasons as for processors below.
 
 ### Your own processors
 
@@ -196,7 +243,7 @@ If a page returns secrets in its body, add its URL pattern to `AUDIT_UNREGISTERE
 AUDIT_PROCESSORS = ["myapp.logging.add_tenant_id"]
 ```
 
-Each entry is the dotted path to a structlog processor: a function `(logger, method_name, event_dict)` that returns the event dict. The processors run in order, on every log line. They run after the package sets `log_type` and `extra`, and before masking, so a value that a processor adds is masked too. A processor sees values before they are masked. Put the values that a processor adds under `extra`. The JSON formatter from `get_stdlib_formatter()` drops top-level keys that are not standard fields. Do not send the event dict anywhere from a processor. Do not raise an exception from a processor. For a structlog logger, the exception goes up into the code that wrote the log line. For a standard `logging` logger, the handler prints the exception to stderr and the line is lost. `structlog.DropEvent` works the other way round: it drops the line for a structlog logger, and a standard `logging` logger raises it into the caller.
+Each entry is the dotted path to a structlog processor: a function `(logger, method_name, event_dict)` that returns the event dict. The processors run in order, on every log line. They run after the package sets `log_type` and `extra`, and before it hides sensitive values, so a value that a processor adds is hidden too. A processor sees values before they are hidden. Put the values that a processor adds under `extra`. The JSON formatter from `get_stdlib_formatter()` drops top-level keys that are not standard fields. Do not send the event dict anywhere from a processor. Do not raise an exception from a processor. For a structlog logger, the exception goes up into the code that wrote the log line. For a standard `logging` logger, the handler prints the exception to stderr and the line is lost. `structlog.DropEvent` works the other way round: it drops the line for a structlog logger, and a standard `logging` logger raises it into the caller.
 
 ## Log Types
 
