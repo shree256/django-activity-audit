@@ -2,9 +2,15 @@ import datetime
 import decimal
 import sys
 
+from collections.abc import Mapping
+from functools import lru_cache
+
 import orjson
 import structlog
 
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
+from django.utils.module_loading import import_string
 from structlog.processors import CallsiteParameter
 
 from activity_audit.constants import LogType
@@ -199,6 +205,99 @@ def _collect_extra(logger, method, event_dict):
     return event_dict
 
 
+MASKED = "[MASKED]"
+TRUNCATED = "[TRUNCATED]"
+# orjson drops the whole line past 254 nested levels, so stop well before that.
+MAX_MASK_DEPTH = 64
+
+# HWC-958. Compared after _normalize_key, so case, "-" and "_" do not matter.
+DEFAULT_MASK_KEYS = (
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "x-csrftoken",
+    "secret_key",
+    "access_token",
+    "refresh_token",
+    "password",
+)
+
+
+def _normalize_key(key):
+    return key.lower().replace("-", "").replace("_", "")
+
+
+def _setting(name):
+    # Apps build formatters while their settings module loads, so read per call.
+    return getattr(settings, name, ()) if settings.configured else ()
+
+
+@lru_cache(maxsize=None)
+def _mask_keys(extra):
+    return frozenset(_normalize_key(key) for key in DEFAULT_MASK_KEYS + extra)
+
+
+@lru_cache(maxsize=None)
+def _load_processors(paths):
+    return tuple(import_string(path) for path in paths)
+
+
+def run_app_processors(logger, method, event_dict):
+    """Run the processors that AUDIT_PROCESSORS names, in order."""
+    for processor in _load_processors(tuple(_setting("AUDIT_PROCESSORS"))):
+        event_dict = processor(logger, method, event_dict)
+    return event_dict
+
+
+def _mask(value, keys, depth, path):
+    if depth > MAX_MASK_DEPTH:
+        return TRUNCATED
+    if not isinstance(value, (Mapping, list, tuple)):
+        return value
+    # path holds ids of containers above this one. The depth cap alone is too
+    # slow for a cycle with two back-references: the work doubles per level.
+    if id(value) in path:
+        return TRUNCATED
+    path.add(id(value))
+    try:
+        if isinstance(value, Mapping):
+            # dict.items() reads raw storage: MultiValueDict.items() keeps only the last value.
+            items = dict.items(value) if isinstance(value, dict) else value.items()
+            return {
+                key: MASKED
+                if isinstance(key, str) and _normalize_key(key) in keys
+                else _mask(item, keys, depth + 1, path)
+                for key, item in items
+            }
+        return [_mask(item, keys, depth + 1, path) for item in value]
+    finally:
+        path.discard(id(value))
+
+
+def mask_sensitive_values(logger, method, event_dict):
+    """Return a copy with each sensitive key's value, at any depth, set to MASKED."""
+    keys = _mask_keys(tuple(_setting("AUDIT_MASK_KEYS_EXTRA")))
+    return _mask(event_dict, keys, 0, set())
+
+
+def check_settings():
+    """Raise at startup, not on the first log line, when a setting is wrong."""
+    for name in ("AUDIT_MASK_KEYS_EXTRA", "AUDIT_PROCESSORS"):
+        value = _setting(name)
+        if not isinstance(value, (list, tuple)) or not all(
+            isinstance(item, str) for item in value
+        ):
+            raise ImproperlyConfigured(
+                f"{name} must be a list or tuple of strings, got {value!r}."
+            )
+    paths = tuple(_setting("AUDIT_PROCESSORS"))
+    for path, processor in zip(paths, _load_processors(paths)):
+        if isinstance(processor, type) or not callable(processor):
+            raise ImproperlyConfigured(
+                f"AUDIT_PROCESSORS entry {path!r} is not callable."
+            )
+
+
 shared_processors = [
     structlog.contextvars.merge_contextvars,
     structlog.stdlib.add_log_level,
@@ -217,4 +316,6 @@ shared_processors = [
     structlog.processors.StackInfoRenderer(),
     structlog.processors.ExceptionRenderer(),
     _collect_extra,
+    run_app_processors,
+    mask_sensitive_values,
 ]
