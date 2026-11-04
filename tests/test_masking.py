@@ -6,7 +6,6 @@ AUDIT_HASH_SECRET = "test-hash-secret" from tests/test_settings.py.
 """
 
 import json
-import logging
 
 from types import MappingProxyType
 
@@ -25,7 +24,6 @@ from activity_audit.shared_processors import (
     mask_sensitive_values,
     run_app_processors,
 )
-from tests.conftest import LogCapture
 from tests.test_audit import _emit_via_structlog
 
 BEARER = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZGEifQ.c2lnbmF0dXJl"
@@ -50,19 +48,6 @@ def label_value(key, value):
 
 class NotAProcessor:
     """A class path is importable and callable, but it is not a processor."""
-
-
-@pytest.fixture
-def rendered_request_log():
-    """Each audit.request line as production renders it, parsed from JSON."""
-    spec = get_stdlib_formatter()
-    formatter_cls = spec.pop("()")
-    capture = LogCapture()
-    capture.setFormatter(formatter_cls(**spec))
-    logger = logging.getLogger("audit.request")
-    logger.addHandler(capture)
-    yield capture.formatted_outputs
-    logger.removeHandler(capture)
 
 
 @pytest.mark.django_db

@@ -100,6 +100,21 @@ def request_log_capture():
 
 
 @pytest.fixture
+def rendered_request_log():
+    """Each audit.request line as production renders it, parsed from JSON."""
+    from activity_audit.config import get_stdlib_formatter
+
+    spec = get_stdlib_formatter()
+    formatter_cls = spec.pop("()")
+    capture = LogCapture()
+    capture.setFormatter(formatter_cls(**spec))
+    logger = logging.getLogger("audit.request")
+    logger.addHandler(capture)
+    yield capture.formatted_outputs
+    logger.removeHandler(capture)
+
+
+@pytest.fixture
 def app_log_capture():
     """Attach a capturing handler with the structlog JSON formatter to the
     app.publications logger.
