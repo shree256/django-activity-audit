@@ -18,6 +18,7 @@ from django.utils.deprecation import MiddlewareMixin
 from .config import get_logger
 from .constants import REQUEST_TYPES
 from .settings import REGISTERED_URLS, SERVICE_NAME, UNREGISTERED_URLS
+from .shared_processors import path_rule
 
 _log = get_logger("audit.request")
 
@@ -88,11 +89,16 @@ def should_log_url(url):
         for registered_url in REGISTERED_URLS:
             pattern = re.compile(registered_url)
             if pattern.match(url):
-                return True
+                return not _skipped_by_rule(url)
         return False
 
     # all good
-    return True
+    return not _skipped_by_rule(url)
+
+
+def _skipped_by_rule(url):
+    rule = path_rule(url)
+    return rule is not None and rule["mode"] == "skip"
 
 
 class AuditLoggingMiddleware(MiddlewareMixin):
