@@ -161,18 +161,20 @@ All settings are optional.
 | `AUDIT_SENSITIVE_VALUE_FUNCTION` | the built-in hash | Dotted path to your own function that replaces a sensitive value. |
 | `AUDIT_HASH_SECRET` | `SECRET_KEY` | The key for the built-in hash. |
 | `AUDIT_PROCESSORS` | `[]` | Dotted paths to your own structlog processors. They run on every log line, in order. |
+| `AUDIT_PATH_RULES` | `[]` | Rules that hash, mask or skip the request log line of chosen paths. See "Per-path rules". |
 | `AUDIT_UNREGISTERED_URLS_DEFAULT` | `[r"^/admin/", r"^/static/", r"^/favicon.ico$"]` | URL patterns that are not logged. If you set it, it replaces the defaults. |
 | `AUDIT_UNREGISTERED_URLS_EXTRA` | `[]` | More URL patterns that are not logged, added to the list above. |
 | `AUDIT_REGISTERED_URLS` | `[]` | If you set it, only the URLs that match are logged. A URL that also matches an unregistered pattern is still not logged. |
 | `AUDIT_SERVICE_NAME` | `"default"` | The `service_name` value in the middleware's request logs. `HTTPClient` takes its name from its constructor. |
 
-The app checks `AUDIT_SENSITIVE_KEYS_DEFAULT`, `AUDIT_SENSITIVE_KEYS_EXTRA`, `AUDIT_SENSITIVE_VALUE_FUNCTION`, `AUDIT_HASH_SECRET` and `AUDIT_PROCESSORS` at startup. Each of these stops the start with an error:
+The app checks `AUDIT_SENSITIVE_KEYS_DEFAULT`, `AUDIT_SENSITIVE_KEYS_EXTRA`, `AUDIT_SENSITIVE_VALUE_FUNCTION`, `AUDIT_HASH_SECRET`, `AUDIT_PROCESSORS` and `AUDIT_PATH_RULES` at startup. Each of these stops the start with an error:
 
 - A key list or `AUDIT_PROCESSORS` value that is not a list or tuple of strings.
 - An `AUDIT_SENSITIVE_VALUE_FUNCTION` or `AUDIT_HASH_SECRET` that is not a non-empty string.
 - A path that does not import.
 - A path to a class, or to something else that is not callable.
 - An empty `SECRET_KEY` when `AUDIT_HASH_SECRET` is not set.
+- A path rule that breaks a rule in "Per-path rules" below. The error gives the rule's position, such as `AUDIT_PATH_RULES[1]`.
 
 ### Sensitive values
 
@@ -198,7 +200,50 @@ The package reads key names only. It does not scan text. These values are not hi
 - Keys with other names, such as `client_secret`, `id_token` or `new_password`. Add them to `AUDIT_SENSITIVE_KEYS_EXTRA`.
 - Values inside dataclass objects. orjson writes them as objects, but the package walks only mappings, lists and tuples.
 
-If a page returns secrets in its body, add its URL pattern to `AUDIT_UNREGISTERED_URLS_EXTRA`.
+If a page returns secrets in its body, add a path rule with `"response_target": ["*"]`. It hides the body and keeps the audit record. To drop the record too, add the URL pattern to `AUDIT_UNREGISTERED_URLS_EXTRA`.
+
+### Per-path rules
+
+`AUDIT_PATH_RULES` changes the request log line of chosen paths. It applies only to the line that the middleware writes for an incoming request, not to model, login or `HTTPClient` lines.
+
+```python
+AUDIT_PATH_RULES = [
+    {
+        "path": r"^/client_applications/login/?$",
+        "mode": "hash",
+        "request_target": ["access_key"],
+        "request_headers": ["*"],
+    },
+    {
+        "path": r"^/client_applications/\d+/keys/$",
+        "mode": "mask",
+        "response_target": ["*"],
+    },
+    {"path": r"^/health/$", "mode": "skip"},
+]
+```
+
+| Rule key | Meaning |
+|---|---|
+| `path` | A regex. A hash or mask rule matches when `re.search` finds it in the request path, without the query string. A skip rule must match the whole path. |
+| `mode` | `"hash"` uses `AUDIT_SENSITIVE_VALUE_FUNCTION`. `"mask"` writes `"[MASKED]"`. `"skip"` writes no request log line. |
+| `request_target` | Keys whose values are hidden in the request body and the query parameters. `["*"]` hides the whole body and every query value. |
+| `response_target` | Keys whose values are hidden in the response body. `["*"]` hides the whole body. |
+| `request_headers` | Request header names whose values are hidden. `["*"]` hides every request header value. |
+| `response_headers` | Response header names whose values are hidden. `["*"]` hides every response header value. |
+
+- The middleware checks `AUDIT_UNREGISTERED_URLS_*` and `AUDIT_REGISTERED_URLS` first. Then it checks the rules in order, and only the first matching rule applies.
+- The URL settings match from the start of the path (`re.match`). Rules match anywhere in it (`re.search`), so add `^` to anchor a rule.
+- Keys and header names match like the sensitive keys: at any depth, ignoring case, `-` and `_`.
+- On a matched path, the sensitive keys are still hidden, with the rule's mode. A rule cannot make a value visible.
+- A skip rule's path must start with `^` and end with `$`, because an unanchored skip can drop the audit record of many paths. A skip rule must also match the whole path. A skip rule has no lists.
+- A hash or mask rule needs at least one non-empty list. A rule that hides nothing would only block later rules.
+- Key targets reach JSON bodies only. A body that is plain text, such as an HTML page, is hidden only by `"*"`.
+- The startup check also rejects an unknown rule key, an invalid regex, and an unknown mode. It also rejects an empty or non-string list entry, and `"*"` together with other entries.
+
+Rules fail open. If a URL changes and its rule stops matching, the rule's targets are logged as they are. Put a key that is secret on every path in `AUDIT_SENSITIVE_KEYS_EXTRA`, and use rules only for keys that are secret on one path. Do not skip a path that reads or changes health data: HIPAA requires a record of that activity.
+
+Put specific paths before general ones: an earlier broad rule wins, and a later rule's targets are then logged as they are. Keep the regexes simple. They run on every request, on paths that clients choose, and a pattern with nested repeats, such as `(a+)+`, can take a long time. For short secrets, `mask` is safer than `hash`, because a person who has the hash key can test guesses. `request_headers: ["*"]` also hides `Content-Type` and `User-Agent`.
 
 ### The hash
 
