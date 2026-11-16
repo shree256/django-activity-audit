@@ -408,3 +408,24 @@ def test_sensitive_values_are_masked_by_default():
         "headers": {"Authorization": "[MASKED]", "Accept": "application/json"},
         "body": {"name": "Ada Lovelace", "users": [{"password": "[MASKED]"}]},
     }
+
+
+@override_settings(AUDIT_SENSITIVE_VALUE_FUNCTION=None)
+def test_client_secret_id_token_and_auth_token_header_are_default_keys():
+    masked = mask_sensitive_values(
+        None,
+        "info",
+        {
+            "headers": {"X-Auth-Token": "xat-19c4", "X-Request-Id": "req-51"},
+            "body": {
+                "client_secret": "cs-8842",
+                "idToken": "eyJ.id.sig",
+                "token": "tk-3",
+            },
+        },
+    )
+
+    assert masked == {
+        "headers": {"X-Auth-Token": "[MASKED]", "X-Request-Id": "req-51"},
+        "body": {"client_secret": "[MASKED]", "idToken": "[MASKED]", "token": "tk-3"},
+    }

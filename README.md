@@ -156,7 +156,7 @@ All settings are optional.
 
 | Setting | Default | What it does |
 |---|---|---|
-| `AUDIT_SENSITIVE_KEYS_DEFAULT` | the 8 keys below | Keys whose values are hidden. If you set it, it replaces the defaults. An empty list, with an empty `AUDIT_SENSITIVE_KEYS_EXTRA`, turns hiding off. |
+| `AUDIT_SENSITIVE_KEYS_DEFAULT` | the 11 keys below | Keys whose values are hidden. If you set it, it replaces the defaults. An empty list, with an empty `AUDIT_SENSITIVE_KEYS_EXTRA`, turns hiding off. |
 | `AUDIT_SENSITIVE_KEYS_EXTRA` | `[]` | More keys to hide, added to the list above. |
 | `AUDIT_SENSITIVE_VALUE_FUNCTION` | not set: values become `"[MASKED]"` | Dotted path to a function that replaces a sensitive value. Set it to the built-in hash, or to your own function. |
 | `AUDIT_HASH_SECRET` | `SECRET_KEY` | The key for the built-in hash. Used only when you turn hashing on. |
@@ -182,13 +182,13 @@ The package hides sensitive values in every log line before it writes the line. 
 
 There are two levels. The sensitive keys are global: they are hidden on every path and in every kind of log line. `AUDIT_PATH_RULES` adds more keys for chosen paths. See "Per-path rules".
 
-The default keys are `Authorization`, `Cookie`, `Set-Cookie`, `X-CSRFToken`, `secret_key`, `access_token`, `refresh_token` and `password`. The match ignores case, `-` and `_`. For example, `access_token`, `access-token` and `accessToken` all match. The whole key must match. A key that only contains a default name, such as `old_password`, is not hidden.
+The default keys are `Authorization`, `Cookie`, `Set-Cookie`, `X-CSRFToken`, `X-Auth-Token`, `secret_key`, `client_secret`, `id_token`, `access_token`, `refresh_token` and `password`. The match ignores case, `-` and `_`. For example, `access_token`, `access-token` and `accessToken` all match. The whole key must match. A key that only contains a default name, such as `old_password`, is not hidden.
 
 To change the list of keys:
 
 ```python
-AUDIT_SENSITIVE_KEYS_DEFAULT = ["authorization", "cookie", "password"]  # replaces the 8 defaults
-AUDIT_SENSITIVE_KEYS_EXTRA = ["token", "client_secret"]  # added to the list
+AUDIT_SENSITIVE_KEYS_DEFAULT = ["authorization", "cookie", "password"]  # replaces the 11 defaults
+AUDIT_SENSITIVE_KEYS_EXTRA = ["token", "api_key"]  # added to the list
 ```
 
 A value nested more than 64 levels deep becomes `"[TRUNCATED]"`. A cycle also ends in `"[TRUNCATED]"`. Without this limit, the JSON renderer cannot write the line, and the line is lost.
@@ -199,7 +199,7 @@ The package reads key names only. It does not scan text. These values are not hi
 - Secrets inside a string, such as an HTML response body or an error message.
 - Request bodies that are not JSON. The middleware does not log those bodies.
 - Secrets in the URL path, such as `/reset/<token>/`.
-- Keys with other names, such as `client_secret`, `id_token` or `new_password`. Add them to `AUDIT_SENSITIVE_KEYS_EXTRA`.
+- Keys with other names, such as `token`, `api_key` or `new_password`. Add them to `AUDIT_SENSITIVE_KEYS_EXTRA`.
 - Values inside dataclass objects. orjson writes them as objects, but the package walks only mappings, lists and tuples.
 
 If a page returns secrets in its body, add a path rule with `"response_target": ["*"]`. It hides the body and keeps the audit record. To drop the record too, add the URL pattern to `AUDIT_UNREGISTERED_URLS_EXTRA`.
@@ -271,7 +271,7 @@ AUDIT_HASH_SECRET = env("AUDIT_HASH_SECRET")
 - A person who has the key can test guesses for short values, such as passwords, because HMAC is fast.
 - Two equal values give equal hashes. A log reader can see that two users sent the same password, without seeing the password.
 - `None` and `""` stay as they are, so a missing value does not look like a secret.
-- If Django settings are not configured, the package cannot read your settings. It then uses the 8 default keys and writes `"[MASKED]"`.
+- If Django settings are not configured, the package cannot read your settings. It then uses the 11 default keys and writes `"[MASKED]"`.
 
 ### Your own value function
 
