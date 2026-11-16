@@ -158,8 +158,8 @@ All settings are optional.
 |---|---|---|
 | `AUDIT_SENSITIVE_KEYS_DEFAULT` | the 8 keys below | Keys whose values are hidden. If you set it, it replaces the defaults. An empty list, with an empty `AUDIT_SENSITIVE_KEYS_EXTRA`, turns hiding off. |
 | `AUDIT_SENSITIVE_KEYS_EXTRA` | `[]` | More keys to hide, added to the list above. |
-| `AUDIT_SENSITIVE_VALUE_FUNCTION` | the built-in hash | Dotted path to your own function that replaces a sensitive value. |
-| `AUDIT_HASH_SECRET` | `SECRET_KEY` | The key for the built-in hash. |
+| `AUDIT_SENSITIVE_VALUE_FUNCTION` | not set: values become `"[MASKED]"` | Dotted path to a function that replaces a sensitive value. Set it to the built-in hash, or to your own function. |
+| `AUDIT_HASH_SECRET` | `SECRET_KEY` | The key for the built-in hash. Used only when you turn hashing on. |
 | `AUDIT_PROCESSORS` | `[]` | Dotted paths to your own structlog processors. They run on every log line, in order. |
 | `AUDIT_PATH_RULES` | `[]` | Rules that hash, mask or skip the request log line of chosen paths. See "Per-path rules". |
 | `AUDIT_UNREGISTERED_URLS_DEFAULT` | `[r"^/admin/", r"^/static/", r"^/favicon.ico$"]` | URL patterns that are not logged. If you set it, it replaces the defaults. |
@@ -178,7 +178,9 @@ The app checks `AUDIT_SENSITIVE_KEYS_DEFAULT`, `AUDIT_SENSITIVE_KEYS_EXTRA`, `AU
 
 ### Sensitive values
 
-The package hides sensitive values in every log line before it writes the line. This includes request logs, model change logs, login logs and app logs. When a key matches, at any depth, the package replaces its value with a keyed hash, such as `"hmac-sha256:ce79ca3145ff1c39"`.
+The package hides sensitive values in every log line before it writes the line. This includes request logs, model change logs, login logs and app logs. When a key matches, at any depth, the package replaces its value with `"[MASKED]"`.
+
+There are two levels. The sensitive keys are global: they are hidden on every path and in every kind of log line. `AUDIT_PATH_RULES` adds more keys for chosen paths. See "Per-path rules".
 
 The default keys are `Authorization`, `Cookie`, `Set-Cookie`, `X-CSRFToken`, `secret_key`, `access_token`, `refresh_token` and `password`. The match ignores case, `-` and `_`. For example, `access_token`, `access-token` and `accessToken` all match. The whole key must match. A key that only contains a default name, such as `old_password`, is not hidden.
 
@@ -226,14 +228,15 @@ AUDIT_PATH_RULES = [
 | Rule key | Meaning |
 |---|---|
 | `path` | A regex. A hash or mask rule matches when `re.search` finds it in the request path, without the query string. A skip rule must match the whole path. |
-| `mode` | `"hash"` uses `AUDIT_SENSITIVE_VALUE_FUNCTION`. `"mask"` writes `"[MASKED]"`. `"skip"` writes no request log line. |
+| `mode` | `"mask"` writes `"[MASKED]"`. `"hash"` writes the built-in hash, or the result of `AUDIT_SENSITIVE_VALUE_FUNCTION` if you set it. `"skip"` writes no request log line. |
 | `request_target` | Keys whose values are hidden in the request body and the query parameters. `["*"]` hides the whole body and every query value. |
 | `response_target` | Keys whose values are hidden in the response body. `["*"]` hides the whole body. |
 | `request_headers` | Request header names whose values are hidden. `["*"]` hides every request header value. |
 | `response_headers` | Response header names whose values are hidden. `["*"]` hides every response header value. |
 
+- A path that no rule matches is still logged, with the global sensitive keys hidden. The rule list is not an allow-list. To log only chosen paths, use `AUDIT_REGISTERED_URLS`.
 - The middleware checks `AUDIT_UNREGISTERED_URLS_*` and `AUDIT_REGISTERED_URLS` first. Then it checks the rules in order, and only the first matching rule applies.
-- The URL settings match from the start of the path (`re.match`). Rules match anywhere in it (`re.search`), so add `^` to anchor a rule.
+- The URL settings match from the start of the path (`re.match`). Hash and mask rules match anywhere in it (`re.search`), so add `^` to anchor a rule.
 - Keys and header names match like the sensitive keys: at any depth, ignoring case, `-` and `_`.
 - On a matched path, the sensitive keys are still hidden, with the rule's mode. A rule cannot make a value visible.
 - A skip rule's path must start with `^` and end with `$`, because an unanchored skip can drop the audit record of many paths. A skip rule must also match the whole path. A skip rule has no lists.
@@ -246,6 +249,14 @@ Rules fail open. If a URL changes and its rule stops matching, the rule's target
 Put specific paths before general ones: an earlier broad rule wins, and a later rule's targets are then logged as they are. Keep the regexes simple. They run on every request, on paths that clients choose, and a pattern with nested repeats, such as `(a+)+`, can take a long time. For short secrets, `mask` is safer than `hash`, because a person who has the hash key can test guesses. `request_headers: ["*"]` also hides `Content-Type` and `User-Agent`.
 
 ### The hash
+
+Hashing is off by default. Turn it on when you must follow one token or secret across log lines, which `"[MASKED]"` does not allow. To hash every sensitive key on every path:
+
+```python
+AUDIT_SENSITIVE_VALUE_FUNCTION = "activity_audit.shared_processors.hash_value"
+```
+
+To hash on chosen paths only, use a `"hash"` rule in `AUDIT_PATH_RULES`.
 
 The built-in hash is HMAC-SHA256 from Django's `salted_hmac`, cut to 16 hex characters. The whole value is hashed as one string. A value that is not a string, such as a list or a number, is hashed as its Python text, `str(value)`. The same value gives the same hash, so you can follow one token across log lines. A person who reads the logs cannot reverse the hash or test guesses without the key.
 
@@ -260,7 +271,7 @@ AUDIT_HASH_SECRET = env("AUDIT_HASH_SECRET")
 - A person who has the key can test guesses for short values, such as passwords, because HMAC is fast.
 - Two equal values give equal hashes. A log reader can see that two users sent the same password, without seeing the password.
 - `None` and `""` stay as they are, so a missing value does not look like a secret.
-- If Django settings are not configured, the package cannot read your settings and has no key. It then uses the 8 default keys and writes `"[MASKED]"`.
+- If Django settings are not configured, the package cannot read your settings. It then uses the 8 default keys and writes `"[MASKED]"`.
 
 ### Your own value function
 

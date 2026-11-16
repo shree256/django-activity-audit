@@ -391,3 +391,20 @@ def test_formatter_still_exposes_trim_log_fields_by_name():
     names = [getattr(p, "__name__", "") for p in get_stdlib_formatter()["processors"]]
 
     assert "trim_log_fields" in names
+
+
+@override_settings(AUDIT_SENSITIVE_VALUE_FUNCTION=None)
+def test_sensitive_values_are_masked_by_default():
+    masked = mask_sensitive_values(
+        None,
+        "info",
+        {
+            "headers": {"Authorization": BEARER, "Accept": "application/json"},
+            "body": {"name": "Ada Lovelace", "users": [{"password": "correct-horse"}]},
+        },
+    )
+
+    assert masked == {
+        "headers": {"Authorization": "[MASKED]", "Accept": "application/json"},
+        "body": {"name": "Ada Lovelace", "users": [{"password": "[MASKED]"}]},
+    }

@@ -289,7 +289,8 @@ def run_app_processors(logger, method, event_dict):
 
 
 def hash_value(key, value):
-    """The default AUDIT_SENSITIVE_VALUE_FUNCTION: a keyed hash of the value.
+    """A keyed hash of the value. Opt in: name this function in
+    AUDIT_SENSITIVE_VALUE_FUNCTION, or use a "hash" rule in AUDIT_PATH_RULES.
 
     None and "" stay as they are, so a missing value does not look like a secret.
     """
@@ -308,11 +309,9 @@ def _masked(key, value):
 
 
 def _value_function():
-    if not settings.configured:
-        # No key to hash with, and no project function to load.
-        return _masked
+    """The project's AUDIT_SENSITIVE_VALUE_FUNCTION, or None."""
     path = _setting("AUDIT_SENSITIVE_VALUE_FUNCTION", None)
-    return _load_processors((path,))[0] if path else hash_value
+    return _load_processors((path,))[0] if path else None
 
 
 def _mask(value, keys, hide, depth, path):
@@ -397,11 +396,11 @@ def mask_sensitive_values(logger, method, event_dict):
         tuple(_setting("AUDIT_SENSITIVE_KEYS_DEFAULT", DEFAULT_SENSITIVE_KEYS)),
         tuple(_setting("AUDIT_SENSITIVE_KEYS_EXTRA")),
     )
-    hide = _value_function()
+    custom = _value_function()
+    hide = custom or _masked
     rule = _line_rule(event_dict)
     if rule is not None:
-        if rule["mode"] == "mask":
-            hide = _masked
+        hide = _masked if rule["mode"] == "mask" else custom or hash_value
         event_dict = _hide_rule_targets(event_dict, rule, keys, hide)
     return _mask(event_dict, keys, hide, 0, set())
 

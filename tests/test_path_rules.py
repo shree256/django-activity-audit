@@ -493,3 +493,30 @@ def test_a_side_named_like_a_global_key_is_hashed_once():
 
     # One hash of the raw text "{'path': '/api/authors/', 'body': {'access_key': 'ak-live-7Q2'}}".
     assert line["request_repr"] == "hmac-sha256:c2b4d0fc3c32fa78"
+
+
+@override_settings(
+    AUDIT_SENSITIVE_VALUE_FUNCTION=None,
+    AUDIT_PATH_RULES=[
+        {"path": r"^/login/$", "mode": "hash", "request_target": ["access_key"]}
+    ],
+)
+def test_hash_rule_hashes_its_path_and_other_paths_are_masked():
+    def line(path):
+        return {
+            "name": "audit.request",
+            "request_type": "internal",
+            "request_repr": {
+                "path": path,
+                "headers": {"Authorization": BEARER},
+                "body": {"access_key": "ak-live-7Q2"},
+            },
+        }
+
+    login = mask_sensitive_values(None, "info", line("/login/"))["request_repr"]
+    other = mask_sensitive_values(None, "info", line("/authors/"))["request_repr"]
+
+    assert login["headers"] == {"Authorization": BEARER_HASH}
+    assert login["body"] == {"access_key": "hmac-sha256:e7ec0a2193ca0425"}
+    assert other["headers"] == {"Authorization": "[MASKED]"}
+    assert other["body"] == {"access_key": "ak-live-7Q2"}
