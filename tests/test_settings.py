@@ -11,6 +11,11 @@ DEBUG = True
 
 SECRET_KEY = "test-secret-key-for-testing-only"
 
+# Fixed so tests can assert literal hash values.
+AUDIT_HASH_SECRET = "test-hash-secret"
+# Hashing is opt-in. Most tests cover it; the default mask has its own tests.
+AUDIT_SENSITIVE_VALUE_FUNCTION = "activity_audit.shared_processors.hash_value"
+
 # Use in-memory SQLite database for fast testing
 DATABASES = {
     "default": {

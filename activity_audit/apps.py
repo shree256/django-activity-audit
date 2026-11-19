@@ -13,5 +13,7 @@ class AuditLoggingConfig(AppConfig):
             unregistered,  # noqa
         )
         from .config import configure
+        from .shared_processors import check_settings
 
+        check_settings()
         configure()
