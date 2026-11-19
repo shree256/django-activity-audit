@@ -128,6 +128,15 @@ def test_a_skip_rule_must_match_the_whole_path():
         [{"path": "/health/$", "mode": "skip"}],
         [{"path": "a{99999999999}", "mode": "mask", "request_target": ["access_key"]}],
         [{"path": "^/a$", "mode": "hash"}],
+        [
+            {
+                "path": "^/a$",
+                "mode": "mask",
+                "request_target": ["access_key"],
+                1: "a",
+                "b": 2,
+            }
+        ],
     ],
 )
 def test_check_settings_rejects_bad_path_rules(rules):
@@ -147,6 +156,27 @@ def test_check_settings_names_the_bad_rule():
 @override_settings(AUDIT_PATH_RULES=VALID_RULES)
 def test_check_settings_accepts_valid_path_rules():
     check_settings()
+
+
+@override_settings(
+    AUDIT_PATH_RULES=(
+        {
+            "path": r"^/client_applications/login/?$",
+            "mode": "mask",
+            "request_target": ("access_key",),
+        },
+    )
+)
+def test_rules_and_their_lists_can_be_tuples():
+    check_settings()
+
+    body = _login_line()["request_repr"]["body"]
+
+    assert body == {
+        "access_key": "[MASKED]",
+        "app": {"access_key": "[MASKED]"},
+        "name": "Ada",
+    }
 
 
 @pytest.mark.django_db
@@ -195,6 +225,16 @@ def test_unregistered_urls_still_skip_a_path_that_has_a_rule(
     monkeypatch, rendered_request_log
 ):
     monkeypatch.setattr(audit_middleware, "UNREGISTERED_URLS", [r"^/api/authors/"])
+
+    APIClient().get("/api/authors/")
+
+    assert rendered_request_log == []
+
+
+@pytest.mark.django_db
+@override_settings(AUDIT_PATH_RULES=[{"path": r"^/api/authors/$", "mode": "skip"}])
+def test_skip_rule_wins_on_a_registered_url(monkeypatch, rendered_request_log):
+    monkeypatch.setattr(audit_middleware, "REGISTERED_URLS", [r"^/api/authors/"])
 
     APIClient().get("/api/authors/")
 
@@ -459,6 +499,27 @@ def test_rules_do_not_change_the_callers_line():
     assert request_repr == {
         "path": "/api/authors/",
         "body": {"access_key": "ak-live-7Q2"},
+    }
+
+
+@override_settings(
+    AUDIT_PATH_RULES=[
+        {"path": r"^/api/authors/$", "mode": "mask", "request_target": ["access_key"]}
+    ]
+)
+def test_a_cycle_in_a_body_that_a_rule_walks_is_truncated():
+    looped = {"access_key": "ak-live-7Q2"}
+    looped["self"] = looped
+    event = {
+        "name": "audit.request",
+        "request_type": "internal",
+        "request_repr": {"path": "/api/authors/", "body": {"loop": looped}},
+    }
+
+    line = mask_sensitive_values(None, "api", event)
+
+    assert line["request_repr"]["body"] == {
+        "loop": {"access_key": "[MASKED]", "self": "[TRUNCATED]"}
     }
 
 

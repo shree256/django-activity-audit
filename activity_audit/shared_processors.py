@@ -230,6 +230,8 @@ DEFAULT_SENSITIVE_KEYS = (
 )
 
 
+# Bounded: request bodies choose the key names.
+@lru_cache(maxsize=4096)
 def _normalize_key(key):
     return key.lower().replace("-", "").replace("_", "")
 
@@ -454,7 +456,8 @@ def _check_path_rules():
         where = f"AUDIT_PATH_RULES[{index}]"
         if not isinstance(rule, dict):
             raise ImproperlyConfigured(f"{where} must be a dict, got {rule!r}.")
-        unknown = sorted(set(rule) - {"path", "mode", *PATH_RULE_LISTS})
+        # key=repr: a rule can carry keys of mixed types, which do not compare.
+        unknown = sorted(set(rule) - {"path", "mode", *PATH_RULE_LISTS}, key=repr)
         if unknown:
             raise ImproperlyConfigured(f"{where} has unknown keys {unknown}.")
         path = rule.get("path")
